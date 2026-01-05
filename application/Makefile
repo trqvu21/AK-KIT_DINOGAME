@@ -190,7 +190,7 @@ $(OBJECTS_DIR)/%.o: %.s
 .PHONY: help
 help:
 	$(Print) "[make flash dev=/dev/tty*] burn firmware via ak bootloader"
-	$(Print) "             Note: This option is needed install ak-flash. Link download & install: https://github.com/epcbtech/ak-flash"
+	$(Print) "             Note: This option is needed install ak-flash. Link download & install: https://github.com/ak-embedded-software/ak-flash"
 	$(Print) "             Example: make flash dev=/dev/ttyUSB0"
 	$(Print) "[make flash] burn firmware via st-link"
 	$(Print) "[make factory] burn factory firmware via st-link"
