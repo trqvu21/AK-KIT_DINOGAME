@@ -43,11 +43,12 @@ struct menu_items{
 };
 
 // Menu items name
+// Menu items name
 static char menu_items_name[NUMBER_MENU_ITEMS][20] = {
-	"   Archery Game   ",		// item 1
-	"   Setting        ",		// item 2
-	"   Charts         ",		// item 3
-	"   Exit           ",		// item 4
+    "   Dino Run       ",		// <--- ĐÃ SỬA TỪ "Archery Game"
+    "   Setting        ",
+    "   Charts         ",
+    "   Exit           ",
 };
 
 // Menu items icon

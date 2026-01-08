@@ -1,26 +1,22 @@
 #include "button.h"
-
 #include "sys_dbg.h"
-
 #include "app.h"
 #include "app_bsp.h"
 #include "app_dbg.h"
 #include "app_if.h"
-
 #include "task_list.h"
-
 #include "scr_archery_game.h"
 
 button_t btn_mode;
 button_t btn_up;
 button_t btn_down;
 
+// --- CALLBACK NÚT MODE ---
 void btn_mode_callback(void* b) {
 	button_t* me_b = (button_t*)b;
 	switch (me_b->state) {
 	case BUTTON_SW_STATE_PRESSED: {
 		APP_DBG("[btn_mode_callback] BUTTON_SW_STATE_PRESSED\n");
-		// task_post_pure_msg(AC_TASK_DISPLAY_ID, AC_DISPLAY_BUTTON_MODE_PRESSED);
 	}
 		break;
 
@@ -32,12 +28,8 @@ void btn_mode_callback(void* b) {
 
 	case BUTTON_SW_STATE_RELEASED: {
 		APP_DBG("[btn_mode_callback] BUTTON_SW_STATE_RELEASED\n");
-		if (ar_game_state != GAME_OFF) {
-			task_post_pure_msg(AR_GAME_ARROW_ID, AR_GAME_ARROW_SHOOT);
-		}
-		else {
-			task_post_pure_msg(AC_TASK_DISPLAY_ID, AC_DISPLAY_BUTTON_MODE_RELEASED);
-		}
+		// SỬA: Luôn gửi tín hiệu chuẩn về Task Display
+		task_post_pure_msg(AC_TASK_DISPLAY_ID, AC_DISPLAY_BUTTON_MODE_RELEASED);
 	}
 		break;
 
@@ -46,12 +38,13 @@ void btn_mode_callback(void* b) {
 	}
 }
 
+// --- CALLBACK NÚT UP ---
 void btn_up_callback(void* b) {
 	button_t* me_b = (button_t*)b;
 	switch (me_b->state) {
 	case BUTTON_SW_STATE_PRESSED: {
-		APP_DBG("[btn_up_callback] BUTTON_SW_STATE_PRESSED\n");
-		// task_post_pure_msg(AC_TASK_DISPLAY_ID, AC_DISPLAY_BUTTON_UP_PRESSED);
+		//APP_DBG("[btn_up_callback] BUTTON_SW_STATE_PRESSED\n");
+		task_post_pure_msg(AC_TASK_DISPLAY_ID, AC_DISPLAY_BUTTON_UP_PRESSED);
 	}
 		break;
 
@@ -63,12 +56,8 @@ void btn_up_callback(void* b) {
 
 	case BUTTON_SW_STATE_RELEASED: {
 		APP_DBG("[btn_up_callback] BUTTON_SW_STATE_RELEASED\n");
-		if (ar_game_state != GAME_OFF) {
-			task_post_pure_msg(AR_GAME_ARCHERY_ID, AR_GAME_ARCHERY_UP);
-		}
-		else {
-			task_post_pure_msg(AC_TASK_DISPLAY_ID, AC_DISPLAY_BUTTON_UP_RELEASED);
-		}
+		// SỬA: Luôn gửi tín hiệu chuẩn về Task Display
+		task_post_pure_msg(AC_TASK_DISPLAY_ID, AC_DISPLAY_BUTTON_UP_RELEASED);
 	}
 		break;
 
@@ -77,12 +66,13 @@ void btn_up_callback(void* b) {
 	}
 }
 
+// --- CALLBACK NÚT DOWN ---
 void btn_down_callback(void* b) {
 	button_t* me_b = (button_t*)b;
 	switch (me_b->state) {
 	case BUTTON_SW_STATE_PRESSED: {
-		APP_DBG("[btn_down_callback] BUTTON_SW_STATE_PRESSED\n");
-		// task_post_pure_msg(AC_TASK_DISPLAY_ID, AC_DISPLAY_BUTTON_DOWN_PRESSED);
+		//APP_DBG("[btn_down_callback] BUTTON_SW_STATE_PRESSED\n");
+		task_post_pure_msg(AC_TASK_DISPLAY_ID, AC_DISPLAY_BUTTON_DOWN_PRESSED);
 	}
 		break;
 
@@ -94,12 +84,8 @@ void btn_down_callback(void* b) {
 
 	case BUTTON_SW_STATE_RELEASED: {
 		APP_DBG("[btn_down_callback] BUTTON_SW_STATE_RELEASED\n");
-		if (ar_game_state != GAME_OFF) {
-			task_post_pure_msg(AR_GAME_ARCHERY_ID, AR_GAME_ARCHERY_DOWN);
-		}
-		else {
-			task_post_pure_msg(AC_TASK_DISPLAY_ID, AC_DISPLAY_BUTTON_DOWN_RELEASED);
-		}
+		// SỬA: Luôn gửi tín hiệu chuẩn về Task Display
+		task_post_pure_msg(AC_TASK_DISPLAY_ID, AC_DISPLAY_BUTTON_DOWN_RELEASED);
 	}
 		break;
 
