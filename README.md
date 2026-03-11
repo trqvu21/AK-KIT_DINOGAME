@@ -1,6 +1,7 @@
 # Multiplayer Dino Game - Build on AK Embedded Base Kit
 
-<center><img src="[https://github.com/ak-embedded-software/archery-game/blob/main/resources/images/epcb_archery_game.webp](https://github.com/ak-embedded-software/archery-game/blob/main/resources/images/epcb_archery_game.webp)" alt="Dino game banner" width="100%"/></center>
+<center><img src="resources/images/AK_Embedded_Base_Kit_STM32L151.webp" alt="Dino game banner" width="100%"/></center>
+
 
 <hr>
 
