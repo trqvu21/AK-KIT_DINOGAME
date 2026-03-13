@@ -118,6 +118,7 @@ sequenceDiagram
         Screen->>Screen: STATE = MP_LOSE
         Screen->>AK_OS: BUZZER_PlayTones(tones_3beep)
     end
+    end
 ```
 
 ### Ghi chú:
