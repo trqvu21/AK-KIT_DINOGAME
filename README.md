@@ -56,6 +56,7 @@ Phần mô tả sau đây về **“Multiplayer Dino game”** , giải thích c
 ### 2.1 Sơ đồ trình tự
 **Sơ đồ trình tự** được sử dụng để mô tả trình tự của các Message và luồng tương tác giữa các đối tượng.
 
+```mermaid
 sequenceDiagram
     autonumber
     participant Player
@@ -117,7 +118,7 @@ sequenceDiagram
         Screen->>Screen: STATE = MP_LOSE
         Screen->>AK_OS: BUZZER_PlayTones(tones_3beep)
     end
-    end
+```
 
 ### Ghi chú:
 **SCREEN_ENTRY:** Cài đặt các thiết lập ban đầu cho đối tượng trong game.
