@@ -320,7 +320,7 @@ Sử dụng còi Buzzer theo phương thức Non-blocking để không làm mấ
 - **tones_3beep:** Báo hiệu Game Over.
 
 ## V. CÁC CẬP NHẬT KIẾN TRÚC & TÍNH NĂNG MỚI (VERSION 2.0)
-Nhằm mang lại trải nghiệm chuyên nghiệp và ổn định hơn, mã nguồn đã được tái cấu trúc (Refactoring) theo chuẩn Kỹ thuật Phần mềm và bổ sung các tính năng nâng cao.
+Nhằm mang lại trải nghiệm chuyên nghiệp và ổn định hơn, mã nguồn đã được tái cấu trúc theo chuẩn Kỹ thuật Phần mềm và bổ sung các tính năng nâng cao.
 
 ### 5.1 Kiến trúc Sảnh chờ (Lobby) & Matchmaking
 Loại bỏ hoàn toàn cơ chế Master/Slave cũ, hệ thống được nâng cấp lên mô hình **Ngang hàng (Peer-to-Peer)** với UI Sảnh chờ chuyên nghiệp:
@@ -333,15 +333,10 @@ Loại bỏ hoàn toàn cơ chế Master/Slave cũ, hệ thống được nâng 
 Giải quyết triệt để vấn đề nhiễu sóng khi có Board mạch thứ 3 xen vào kênh truyền (Channel Hopping) của 2 thiết bị đang thi đấu:
 - **Payload 5-Bytes:** Gói tin RF gửi đi được mở rộng từ 1 Byte thành 5 Bytes (bao gồm `[Lệnh CMD]` + `[Ký tự 1]` + `[Ký tự 2]` + `[Ký tự 3]` + `[\0]`). 
 - **Target Locking:** Sau khi ghép cặp thành công, vi điều khiển sẽ lưu trữ Tên của đối phương vào bộ nhớ RAM. Mọi lệnh mạng (`CMD_I_DIED`, `CMD_ATTACK`) đến từ các Board không khớp thẻ tên sẽ bị loại bỏ lập tức (Drop Packet), đảm bảo ván game không bị phá hoại.
-- Khắc phục lỗi `Hard Fault` trên thanh ghi SPI bằng cách sử dụng từ khóa `static` cho mảng `tx_buf`, đảm bảo bộ đệm DMA đọc dữ liệu an toàn.
 
-### 5.3 Thuật toán Sinh hạt giống qua Hardware UID
-Việc nạp chung 1 file code `.bin` trên nhiều mạch gây ra lỗi trùng lặp chuỗi ngẫu nhiên `rand()`, khiến mọi board đều có tên giống hệt nhau (Ví dụ: `P08`) và sinh chướng ngại vật y hệt nhau ở mỗi ván.
-- **Giải pháp:** Sử dụng bộ đếm thời gian thực **SysTick** của lõi ARM Cortex-M (`0xE000E018`) để làm Hạt giống (Seed) cho hàm `srand()`. Đảm bảo tính Độc bản hoàn toàn dựa trên sai số thạch anh phần cứng mà không phụ thuộc vào code.
 
 ### 5.4 Giao diện Dark Mode & Clean Code
-- **Cấu trúc Single Responsibility:** Toàn bộ file `scr_archery_game.cpp` được phẫu thuật thành 8 phân khu Logic rõ ràng, tách bạch giữa Network Layer, Physics Engine và View Renderer. Sử dụng `Forward Declarations` để xử lý vòng lặp gọi hàm.
+- **Cấu trúc Single Responsibility:** Toàn bộ file `scr_archery_game.cpp` được phẫu thuật thành 8 phân khu Logic rõ ràng, tách bạch giữa Network Layer, Physics Engine và View Renderer. 
 - **Dark Mode Game Over:** Thiết kế lại màn hình Game Over theo phong cách tối giản, nền đen chữ trắng, loại bỏ các chi tiết thừa để tập trung hiển thị Kỷ lục (BEST SCORE).
-- **Graphic Assets:** Đồ họa đám mây được thay thế sang chuẩn kích thước `32x16 pixel`, thiết kế lấy cảm hứng từ Google Dinosaur nguyên bản.
 ---
 *******
