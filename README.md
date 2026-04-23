@@ -22,7 +22,7 @@ KIT cũng tích hợp **RS485**, **NRF24L01+**, và **Flash** lên đến 32MB, 
 ### 1.2 Mô tả trò chơi và đối tượng
 Phần mô tả sau đây về **“Multiplayer Dino game”** , giải thích cách chơi và cơ chế xử lý của trò chơi.
 
-<p align="center"><img src="resources/images/menu.webp" alt="AK Embedded Base Kit - STM32L151" width="480"/></p>
+<p align="center"><img src="resources/images/menudino.webp" alt="AK Embedded Base Kit - STM32L151" width="480"/></p>
 <p align="center"><strong><em>Hình 2:</em></strong> Màn hình game play và các đối tượng</p>
 
 #### 1.2.1 Các đối tượng (Object) trong game:
@@ -330,12 +330,12 @@ Loại bỏ hoàn toàn cơ chế Master/Slave cũ, hệ thống được nâng 
 - **Chơi Solo:** Hỗ trợ nhấp đúp (Double Tap) phím `DOWN` trong lúc tìm trận để bỏ qua mạng và chơi một mình.
 
 ### 5.2 Mở rộng Payload RF & Cách ly phiên chơi (Session Isolation)
-Giải quyết triệt để vấn đề nhiễu sóng khi có Board mạch thứ 3 xen vào kênh truyền (Channel Hopping) của 2 thiết bị đang thi đấu:
+Giải quyết triệt để vấn đề nhiễu sóng khi có Board mạch thứ 3 xen vào kênh truyền của 2 thiết bị đang thi đấu:
 - **Payload 5-Bytes:** Gói tin RF gửi đi được mở rộng từ 1 Byte thành 5 Bytes (bao gồm `[Lệnh CMD]` + `[Ký tự 1]` + `[Ký tự 2]` + `[Ký tự 3]` + `[\0]`). 
 - **Target Locking:** Sau khi ghép cặp thành công, vi điều khiển sẽ lưu trữ Tên của đối phương vào bộ nhớ RAM. Mọi lệnh mạng (`CMD_I_DIED`, `CMD_ATTACK`) đến từ các Board không khớp thẻ tên sẽ bị loại bỏ lập tức (Drop Packet), đảm bảo ván game không bị phá hoại.
 
 
-### 5.4 Giao diện Dark Mode & Clean Code
+### 5.4 Giao diện 
 - **Cấu trúc Single Responsibility:** Toàn bộ file `scr_archery_game.cpp` được phẫu thuật thành 8 phân khu Logic rõ ràng, tách bạch giữa Network Layer, Physics Engine và View Renderer. 
 - **Dark Mode Game Over:** Thiết kế lại màn hình Game Over theo phong cách tối giản, nền đen chữ trắng, loại bỏ các chi tiết thừa để tập trung hiển thị Kỷ lục (BEST SCORE).
 ---
