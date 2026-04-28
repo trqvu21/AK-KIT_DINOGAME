@@ -30,12 +30,16 @@ Phần mô tả sau đây về **“Multiplayer Dino game”** , giải thích c
 |---|---|---|
 |**Khủng long**|Dino|Nhân vật chính. Có thể điều khiển nhảy lên hoặc gập người cúi xuống.|
 |**Xương rồng**|Cactus|Chướng ngại vật nằm sát mặt đất. Bắt buộc phải nhảy qua.|
-|**Chim dực long**|Bird|Chướng ngại vật bay trên không ở 2 tầm (cao và thấp). Ép người chơi phải nhảy hoặc cúi.|
+|**Chim**|Bird|Chướng ngại vật bay trên không ở 2 tầm (cao và thấp). Ép người chơi phải nhảy hoặc cúi.|
 |**Hộp quà**|Gift|Vật phẩm (Item) rơi ngẫu nhiên. Khi ăn được sẽ dùng để tấn công đối thủ qua sóng RF.|
-|**Đám mây**|Cloud|Cảnh nền lơ lửng, trôi chậm hơn tiền cảnh để tạo hiệu ứng 3D (Parallax).|
+|**Đám mây**|Cloud|Cảnh nền lơ lửng.|
 
 #### 1.2.2 Cách chơi game:
-- Trò chơi sử dụng 2 thiết bị kết nối với nhau. Một thiết bị được phân quyền làm `MASTER`. Nhấn nút **[Down]** trên máy Master để bắt đầu đồng bộ ván chơi cho cả 2 thiết bị.
+- Trò chơi sử dụng 2 thiết bị kết nối với nhau qua cơ chế sảnh chờ:
+ **Định danh người chơi:** Mạch tự động hiển thị tên ngẫu nhiên trên màn hình OLED (Ví dụ: `MY NAME: [P73]`).
+- **Gửi lời mời:** Nhấn nút `DOWN` để báo danh Ready (`WAITING REPLY...`).
+- **Phản hồi:** Thiết bị nhận lời mời sẽ hiển thị cảnh báo `[P73] INVITES!`, cho phép người chơi ấn `UP` để Chấp nhận (ACCEPT) hoặc ấn `DOWN` để Từ chối (REJECT).
+- **Chơi Solo:** Hỗ trợ nhấp đúp (Double Tap) phím `DOWN` trong lúc tìm trận để bỏ qua mạng và chơi một mình.
 - Trong trò chơi này bạn sẽ điều khiển Dino, nhấn nút **[Up]** để bật nhảy, và nhấn giữ nút **[Down]** để gập người cúi xuống.
 - Mục tiêu trò chơi là kiếm được càng nhiều điểm càng tốt, sống sót lâu nhất có thể và ăn Hộp quà để gây khó dễ cho máy đối thủ. Trò chơi kết thúc khi Dino chạm vào Cactus hoặc Bird.
 
@@ -94,7 +98,7 @@ sequenceDiagram
     AK_OS->>Screen: AR_GAME_TIME_TICK
     activate Screen
     Screen->>Player: Đọc trạng thái nút bấm (Jump/Duck)
-    Screen->>RF: nRF24_RXPacket() (Nghe ngóng lệnh đối thủ)
+    Screen->>RF: nRF24_RXPacket() (Nghe lệnh đối thủ)
     Screen->>Dino: dino_update()
     activate Dino
     Dino->>Objects: Di chuyển vật thể (x -= current_speed)
@@ -173,7 +177,7 @@ typedef struct {
 |bg_obj_t|bgs[1]|
 
 #### 2.2.2 Phân bổ Hàm xử lý (Task & Handlers)
-Để giải quyết triệt để lỗi tràn bộ nhớ (MF 31) do việc khởi tạo quá nhiều Task độc lập, hệ thống Dino Game đã được tối ưu hóa toàn bộ logic vào chung một Task duy nhất (`AC_TASK_DISPLAY_ID`) của RTOS. Các đối tượng được xử lý tuần tự qua các Function con trong mỗi chu kỳ Frame.
+Để giải quyết lỗi tràn bộ nhớ (MF 31) do việc khởi tạo quá nhiều Task độc lập, hệ thống Dino Game đã được tối ưu hóa toàn bộ logic vào chung một Task duy nhất (`AC_TASK_DISPLAY_ID`) của RTOS. Các đối tượng được xử lý tuần tự qua các Function con trong mỗi chu kỳ Frame.
 
 | Đối tượng / Phân hệ | Hàm xử lý (Handler) | Mô tả chức năng |
 | :--- | :--- | :--- |
@@ -188,7 +192,7 @@ typedef struct {
 |---|---|---|
 |AC_TASK_DISPLAY_ID|SCREEN_ENTRY|Khởi tạo game ban đầu|
 |AC_TASK_DISPLAY_ID|AR_GAME_TIME_TICK|Chu kỳ 10ms để tính toán và cập nhật Frame|
-|AC_TASK_DISPLAY_ID|AC_DISPLAY_BUTTON_DOWN_PRESSED|Sử dụng làm lệnh bắt đầu cho MASTER|
+|AC_TASK_DISPLAY_ID|AC_DISPLAY_BUTTON_DOWN_PRESSED|Sử dụng làm lệnh bắt đầu|
 |AC_TASK_DISPLAY_ID|AC_DISPLAY_BUTTON_MODE_RELEASED|Thoát game về màn hình chính|
 
 ## III. Hướng dẫn chi tiết code trong đối tượng
@@ -234,7 +238,8 @@ void dino_update() {
 
 ### 3.2 ĐỒNG BỘ NRF24L01+ MULTIPLAYER
 
-**Tóm tắt nguyên lý:** Cấu hình hệ thống ở kênh truyền thứ 40, tốc độ 1Mbps. Đọc data mỗi 10ms trong chu kỳ `AR_GAME_TIME_TICK` để đưa ra hành động tương ứng.
+**Tóm tắt nguyên lý:**
+`AR_GAME_TIME_TICK` để đưa ra hành động tương ứng.
 
 ```cpp
 void rf_send_cmd(uint8_t cmd) {
@@ -319,24 +324,4 @@ Sử dụng còi Buzzer theo phương thức Non-blocking để không làm mấ
 - **tones_startup:** Âm thanh kéo dài khi bị đối thủ tấn công (Speed Up).
 - **tones_3beep:** Báo hiệu Game Over.
 
-## V. CÁC CẬP NHẬT KIẾN TRÚC & TÍNH NĂNG MỚI (VERSION 2.0)
-Nhằm mang lại trải nghiệm chuyên nghiệp và ổn định hơn, mã nguồn đã được tái cấu trúc theo chuẩn Kỹ thuật Phần mềm và bổ sung các tính năng nâng cao.
 
-### 5.1 Kiến trúc Sảnh chờ (Lobby) & Matchmaking
-Loại bỏ hoàn toàn cơ chế Master/Slave cũ, hệ thống được nâng cấp lên mô hình **Ngang hàng (Peer-to-Peer)** với UI Sảnh chờ chuyên nghiệp:
-- **Định danh người chơi:** Mạch tự động hiển thị tên ngẫu nhiên trên màn hình OLED (Ví dụ: `MY NAME: [P73]`).
-- **Gửi lời mời:** Nhấn nút `DOWN` để báo danh Ready (`WAITING REPLY...`).
-- **Phản hồi:** Thiết bị nhận lời mời sẽ hiển thị cảnh báo `[P73] INVITES!`, cho phép người chơi ấn `UP` để Chấp nhận (ACCEPT) hoặc ấn `DOWN` để Từ chối (REJECT).
-- **Chơi Solo:** Hỗ trợ nhấp đúp (Double Tap) phím `DOWN` trong lúc tìm trận để bỏ qua mạng và chơi một mình.
-
-### 5.2 Mở rộng Payload RF & Cách ly phiên chơi (Session Isolation)
-Giải quyết triệt để vấn đề nhiễu sóng khi có Board mạch thứ 3 xen vào kênh truyền của 2 thiết bị đang thi đấu:
-- **Payload 5-Bytes:** Gói tin RF gửi đi được mở rộng từ 1 Byte thành 5 Bytes (bao gồm `[Lệnh CMD]` + `[Ký tự 1]` + `[Ký tự 2]` + `[Ký tự 3]` + `[\0]`). 
-- **Target Locking:** Sau khi ghép cặp thành công, vi điều khiển sẽ lưu trữ Tên của đối phương vào bộ nhớ RAM. Mọi lệnh mạng (`CMD_I_DIED`, `CMD_ATTACK`) đến từ các Board không khớp thẻ tên sẽ bị loại bỏ lập tức (Drop Packet), đảm bảo ván game không bị phá hoại.
-
-
-### 5.4 Giao diện 
-- **Cấu trúc Single Responsibility:** Toàn bộ file `scr_archery_game.cpp` được phẫu thuật thành 8 phân khu Logic rõ ràng, tách bạch giữa Network Layer, Physics Engine và View Renderer. 
-- **Dark Mode Game Over:** Thiết kế lại màn hình Game Over theo phong cách tối giản, nền đen chữ trắng, loại bỏ các chi tiết thừa để tập trung hiển thị Kỷ lục (BEST SCORE).
----
-*******
