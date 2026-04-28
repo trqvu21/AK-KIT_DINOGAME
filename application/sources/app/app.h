@@ -149,7 +149,7 @@ enum {
 };
 
 /*****************************************************************************/
-/*  Archery game 'SCREEN' task define
+/*  Dino game 'SCREEN' task define
  */
 /*****************************************************************************/
 /* define timer */
@@ -164,68 +164,63 @@ enum {
 };
 
 /*****************************************************************************/
-/*  Archery game 'ARCHERY' task define
+/*  Dino game 'DINO' task define
  */
 /*****************************************************************************/
-/* define timer */
-/* define signal */
 enum {
-	AR_GAME_ARCHERY_SETUP = AR_GAME_DEFINE_SIG,
-	AR_GAME_ARCHERY_UPDATE,
-	AR_GAME_ARCHERY_UP,
-	AR_GAME_ARCHERY_DOWN,
-	AR_GAME_ARCHERY_RESET,
+	AR_GAME_DINO_SETUP = AR_GAME_DEFINE_SIG,
+	AR_GAME_DINO_UPDATE,
+	AR_GAME_DINO_JUMP,
+	AR_GAME_DINO_RESET,
 };
 
 /*****************************************************************************/
-/*  Archery game 'ARROW' task define
+/*  Dino game 'OBJECTS' task define
  */
 /*****************************************************************************/
-/* define timer */
-/* define signal */
 enum {
-	AR_GAME_ARROW_SETUP = AR_GAME_DEFINE_SIG,
-	AR_GAME_ARROW_RUN,
-	AR_GAME_ARROW_SHOOT,
-	AR_GAME_ARROW_RESET,
+	AR_GAME_OBJECTS_SETUP = AR_GAME_DEFINE_SIG,
+	AR_GAME_OBJECTS_UPDATE,
+	AR_GAME_OBJECTS_RESET,
 };
 
 /*****************************************************************************/
-/*  Archery game 'BANG' task define
+/*  Dino game 'RF' task define
  */
 /*****************************************************************************/
-/* define timer */
-/* define signal */
 enum {
-	AR_GAME_BANG_SETUP = AR_GAME_DEFINE_SIG,
-	AR_GAME_BANG_UPDATE,
-	AR_GAME_BANG_RESET,
+	AR_GAME_RF_SETUP = AR_GAME_DEFINE_SIG,
+	AR_GAME_RF_POLL,
+	AR_GAME_RF_READY,
+	AR_GAME_RF_ACCEPT,
+	AR_GAME_RF_REJECT,
+	AR_GAME_RF_START_SOLO,
+	AR_GAME_RF_SEND_ATTACK,
+	AR_GAME_RF_SEND_DIED,
+	AR_GAME_RF_RESET,
 };
 
 /*****************************************************************************/
-/*  Archery game 'BORDER' task define
+/*  Dino game 'WORLD' task define
  */
 /*****************************************************************************/
-/* define timer */
-/* define signal */
 enum {
-	AR_GAME_BORDER_SETUP = AR_GAME_DEFINE_SIG,
-	AR_GAME_LEVEL_UP,
-	AR_GAME_CHECK_GAME_OVER,
-	AR_GAME_BORDER_RESET,
+	AR_GAME_WORLD_SETUP = AR_GAME_DEFINE_SIG,
+	AR_GAME_WORLD_UPDATE,
+	AR_GAME_WORLD_RESET,
+	AR_GAME_WORLD_ATTACK_BEGIN,
+	AR_GAME_WORLD_LOSE,
+	AR_GAME_WORLD_WIN,
 };
 
 /*****************************************************************************/
-/*  Archery game 'METEOROID' task define
+/*  Dino game 'BACKGROUND' task define
  */
 /*****************************************************************************/
-/* define timer */
-/* define signal */
 enum {
-	AR_GAME_METEOROID_SETUP = AR_GAME_DEFINE_SIG,
-	AR_GAME_METEOROID_RUN,
-	AR_GAME_METEOROID_DETONATOR,
-	AR_GAME_METEOROID_RESET,
+	AR_GAME_BACKGROUND_SETUP = AR_GAME_DEFINE_SIG,
+	AR_GAME_BACKGROUND_UPDATE,
+	AR_GAME_BACKGROUND_RESET,
 };
 
 /*****************************************************************************/

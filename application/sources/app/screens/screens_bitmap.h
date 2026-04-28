@@ -34,6 +34,12 @@ extern const unsigned char PROGMEM chart_icon [];
 extern const unsigned char PROGMEM setting_icon [];
 extern const unsigned char PROGMEM exit_icon [];
 extern const unsigned char PROGMEM bitmap_dino [];
+extern const unsigned char PROGMEM bitmap_dino_duck [];
+extern const unsigned char PROGMEM bitmap_dino_dead [];
 extern const unsigned char PROGMEM bitmap_cactus [];
+extern const unsigned char PROGMEM bitmap_cloud [];
+extern const unsigned char PROGMEM bitmap_mountain [];
+extern const unsigned char PROGMEM bitmap_gift [];
+extern const unsigned char PROGMEM bitmap_bird [];
 
 #endif //__SCREENS_BITMAP_H__

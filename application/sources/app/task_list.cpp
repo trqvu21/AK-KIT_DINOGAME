@@ -18,13 +18,13 @@ const task_t app_task_table[] = {
 	{AC_TASK_DISPLAY_ID			,	TASK_PRI_LEVEL_4	,	task_display		},
 
 	/*************************************************************************/
-	/* ARCHERY GAME */
+	/* DINO GAME */
 	/*************************************************************************/
-	{AR_GAME_METEOROID_ID		,	TASK_PRI_LEVEL_4	,	ar_game_meteoroid_handle},
-	{AR_GAME_BORDER_ID			,	TASK_PRI_LEVEL_4	,	ar_game_border_handle	},
-	{AR_GAME_ARCHERY_ID			,	TASK_PRI_LEVEL_4	,	ar_game_archery_handle	},
-	{AR_GAME_ARROW_ID			,	TASK_PRI_LEVEL_4	,	ar_game_arrow_handle	},
-	{AR_GAME_BANG_ID			,	TASK_PRI_LEVEL_4	,	ar_game_bang_handle		},
+	{AR_GAME_BACKGROUND_ID		,	TASK_PRI_LEVEL_4	,	ar_game_background_handle},
+	{AR_GAME_WORLD_ID			,	TASK_PRI_LEVEL_4	,	ar_game_world_handle	},
+	{AR_GAME_DINO_ID			,	TASK_PRI_LEVEL_4	,	ar_game_dino_handle		},
+	{AR_GAME_OBJECTS_ID			,	TASK_PRI_LEVEL_4	,	ar_game_objects_handle	},
+	{AR_GAME_RF_ID				,	TASK_PRI_LEVEL_4	,	ar_game_rf_handle		},
 	{AR_GAME_SCREEN_ID			,	TASK_PRI_LEVEL_4	,	scr_archery_game_handle	},
 
 	/*************************************************************************/

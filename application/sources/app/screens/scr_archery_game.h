@@ -23,11 +23,11 @@
 #include "screens.h"
 #include "screens_bitmap.h"
 
-#include "ar_game_archery.h"
-#include "ar_game_arrow.h"
-#include "ar_game_bang.h"
-#include "ar_game_border.h"
-#include "ar_game_meteoroid.h"
+#include "ar_game_background.h"
+#include "ar_game_dino.h"
+#include "ar_game_objects.h"
+#include "ar_game_rf.h"
+#include "ar_game_world.h"
 
 #define GAME_OFF		(0)
 #define GAME_PLAY		(1)

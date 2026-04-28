@@ -39,31 +39,39 @@ void view_scr_game_over() {
 	// =========================================================
 	view_render.setTextSize(2);
 	view_render.setTextColor(WHITE);
-	view_render.setCursor(12, 5 + anim_y); // Cộng anim_y để trôi bồng bềnh
+	view_render.drawFastHLine(8, 3, 112, WHITE);
+	view_render.drawPixel(4, 3, WHITE);
+	view_render.drawPixel(123, 3, WHITE);
+	view_render.setCursor(12, 7 + anim_y); // Cộng anim_y để trôi bồng bềnh
 	view_render.print("GAME OVER");
 
 	// =========================================================
 	// 2. ĐIỂM SỐ & KỶ LỤC
 	// =========================================================
 	view_render.setTextSize(1);
-	view_render.setCursor(20, 28);
-	view_render.print("SCORE:");
-	view_render.setCursor(65, 28);
+	view_render.drawRoundRect(16, 27, 96, 19, 2, WHITE);
+	view_render.drawFastVLine(62, 29, 15, WHITE);
+	view_render.setCursor(22, 32);
+	view_render.print("SCORE");
+	view_render.setCursor(72, 32);
 	view_render.print(ar_game_score);
 
 	if (is_new_record) {
 		// Nếu phá kỷ lục -> Nhấp nháy dòng chữ NEW BEST!
 		if (blink_state) {
-			view_render.setCursor(20, 38);
-			view_render.print("NEW BEST!");
-			view_render.setCursor(80, 38);
+			view_render.fillRect(33, 46, 62, 8, WHITE);
+			view_render.setTextColor(BLACK);
+			view_render.setCursor(38, 47);
+			view_render.print("NEW BEST");
+			view_render.setTextColor(WHITE);
+			view_render.setCursor(99, 47);
 			view_render.print(gamescore_over.score_1st);
 		}
 	} else {
 		// Nếu không phá kỷ lục -> Hiện bình thường
-		view_render.setCursor(20, 38);
+		view_render.setCursor(32, 47);
 		view_render.print("BEST :");
-		view_render.setCursor(65, 38);
+		view_render.setCursor(75, 47);
 		view_render.print(gamescore_over.score_1st);
 	}
 
@@ -72,7 +80,7 @@ void view_scr_game_over() {
 	// =========================================================
 	
 	// ICON 1: Chơi lại (Nút DOWN) - Hình vòng lặp (Restart)
-	int x1 = 25, y1 = 54;
+	int x1 = 12, y1 = 54;
 	view_render.drawFastHLine(x1+2, y1+1, 4, WHITE); // Vòng cung trên
 	view_render.drawFastHLine(x1+2, y1+7, 4, WHITE); // Vòng cung dưới
 	view_render.drawFastVLine(x1+1, y1+3, 3, WHITE); // Vòng cung trái
@@ -84,7 +92,7 @@ void view_scr_game_over() {
 	view_render.drawLine(x1+5, y1+3, x1+7, y1+1, WHITE); // Cánh mũi tên dưới
 
 	// ICON 2: Bảng Xếp Hạng (Nút UP) - Bục nhận giải 3 bậc
-	int x2 = 60, y2 = 54;
+	int x2 = 58, y2 = 54;
 	// Bậc 2 (Trái)
 	view_render.drawFastHLine(x2, y2+4, 3, WHITE);
 	view_render.drawFastVLine(x2, y2+4, 5, WHITE);
@@ -98,7 +106,7 @@ void view_scr_game_over() {
 	view_render.drawFastHLine(x2, y2+9, 12, WHITE); // Mặt đất bục
 
 	// ICON 3: Trang chủ (Nút MODE) - Hình Ngôi nhà mini
-	int x3 = 96, y3 = 54;
+	int x3 = 106, y3 = 54;
 	view_render.drawLine(x3, y3+4, x3+4, y3, WHITE);     // Mái trái
 	view_render.drawLine(x3+4, y3, x3+8, y3+4, WHITE);   // Mái phải
 	view_render.drawFastVLine(x3+1, y3+4, 5, WHITE);     // Tường trái

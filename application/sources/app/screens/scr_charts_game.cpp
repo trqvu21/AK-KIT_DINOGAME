@@ -35,10 +35,14 @@ void view_scr_charts_game() {
 	// 1. Vẽ Tiêu đề & Hướng dẫn
 	view_render.setTextSize(1);
 	view_render.setTextColor(WHITE);
+	view_render.drawFastHLine(0, 10, 128, WHITE);
+	view_render.drawPixel(2, 12, WHITE);
+	view_render.drawPixel(125, 12, WHITE);
 	view_render.setCursor(0, 0);
 	view_render.print("<[M]"); // Bấm phím Mode để thoát
 	
-	view_render.setCursor(45, 0);
+	view_render.drawRoundRect(42, 0, 42, 10, 2, WHITE);
+	view_render.setCursor(46, 2);
 	view_render.print("CHARTS");
 
 	view_render.setCursor(95, 0);
@@ -48,6 +52,9 @@ void view_scr_charts_game() {
 	// 2. VẼ BỤC NHẬN GIẢI (PODIUM OUTLINES) - GIỮ NGUYÊN
 	// =================================================================
 	view_render.drawFastHLine(0, 63, 128, WHITE);     // Mặt đất
+	for (uint8_t x = 5; x < 128; x += 10) {
+		view_render.drawPixel(x, 61, WHITE);
+	}
 
 	view_render.drawFastHLine(0, 42, 42, WHITE);      // Mặt bục 2
 	view_render.drawFastVLine(42, 28, 14, WHITE);     // Vách nối 2-1
@@ -56,6 +63,12 @@ void view_scr_charts_game() {
 	view_render.drawFastVLine(86, 28, 22, WHITE);     // Vách nối 1-3
 
 	view_render.drawFastHLine(86, 50, 42, WHITE);     // Mặt bục 3
+	view_render.drawFastVLine(0, 42, 21, WHITE);
+	view_render.drawFastVLine(127, 50, 13, WHITE);
+	view_render.drawFastHLine(47, 25, 34, WHITE);
+	view_render.drawPixel(64, 22, WHITE);
+	view_render.drawPixel(61, 23, WHITE);
+	view_render.drawPixel(67, 23, WHITE);
 
 	// =================================================================
 	// 3. VẼ SỐ HẠNG (1, 2, 3) VÀO GIỮA BỤC (ĐÃ THIẾT KẾ LẠI)
@@ -82,14 +95,19 @@ void view_scr_charts_game() {
 	// Cỡ chữ nhỏ (size 1) và lơ lửng nhẹ nhàng.
 	
 	// Điểm TOP 2 (Trái)
+	view_render.drawRoundRect(5, 28 + anim_y, 31, 11, 2, WHITE);
 	view_render.setCursor(10, 30 + anim_y);
 	view_render.print(gamescore_charts.score_2nd);
 
 	// Điểm TOP 1 (Giữa)
+	view_render.fillRect(48, 12 + anim_y, 32, 11, WHITE);
+	view_render.setTextColor(BLACK);
 	view_render.setCursor(52, 14 + anim_y);
 	view_render.print(gamescore_charts.score_1st);
+	view_render.setTextColor(WHITE);
 
 	// Điểm TOP 3 (Phải)
+	view_render.drawRoundRect(91, 36 + anim_y, 31, 11, 2, WHITE);
 	view_render.setCursor(96, 38 + anim_y);
 	view_render.print(gamescore_charts.score_3rd);
 
