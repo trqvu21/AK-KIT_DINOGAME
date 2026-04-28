@@ -14,4 +14,4 @@ void ar_game_background_reset();
 void ar_game_background_render();
 void ar_game_background_handle(ak_msg_t* msg);
 
-#endif //__AR_GAME_BACKGROUND_H__
+#endif

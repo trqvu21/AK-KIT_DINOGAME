@@ -73,4 +73,4 @@ extern uint8_t ar_game_frame_skip;
 extern int32_t ar_game_current_speed;
 extern uint16_t ar_game_attack_timer;
 
-#endif //__AR_GAME_COMMON_H__
+#endif

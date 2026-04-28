@@ -15,6 +15,13 @@ void ar_game_dino_reset() {
     dino.is_ducking = false;
 }
 
+void ar_game_dino_jump() {
+    if (!dino.is_jumping) {
+        dino.v_y = AR_DINO_JUMP_SCALED;
+        dino.is_jumping = true;
+    }
+}
+
 void ar_game_dino_update() {
     dino.is_ducking = (btn_down.state == BUTTON_SW_STATE_PRESSED);
 
@@ -50,13 +57,6 @@ bool ar_game_dino_hit_test(const ar_game_object_t* obj) {
 void ar_game_dino_render() {
     const unsigned char* dino_bmp = dino.is_ducking ? bitmap_dino_duck : bitmap_dino;
     view_render.drawBitmap(AR_DINO_X, dino.y / 10, dino_bmp, AR_DINO_W, AR_DINO_H, WHITE);
-}
-
-void ar_game_dino_jump() {
-    if (!dino.is_jumping) {
-        dino.v_y = AR_DINO_JUMP_SCALED;
-        dino.is_jumping = true;
-    }
 }
 
 void ar_game_dino_handle(ak_msg_t* msg) {

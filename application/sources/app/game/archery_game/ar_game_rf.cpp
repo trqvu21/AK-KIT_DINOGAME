@@ -89,6 +89,46 @@ static void start_match() {
     BUZZER_PlayTones(tones_startup);
 }
 
+static bool packet_is_from_opponent(const char* rx_name) {
+    return strcmp(rx_name, opponent_name) == 0 || opponent_name[0] == '\0';
+}
+
+static void handle_waiting_packet(uint8_t cmd, const char* rx_name) {
+    if (cmd == CMD_READY) {
+        if (lobby_state == 0) {
+            strcpy(opponent_name, rx_name);
+            lobby_state = 2;
+            BUZZER_PlayTones(tones_cc);
+        }
+        else if (lobby_state == 1) {
+            strcpy(opponent_name, rx_name);
+            rf_send_cmd(CMD_ACCEPT);
+            start_match();
+        }
+    }
+    else if (cmd == CMD_ACCEPT && lobby_state == 1) {
+        strcpy(opponent_name, rx_name);
+        start_match();
+    }
+    else if (cmd == CMD_REJECT && lobby_state == 1) {
+        lobby_state = 0;
+        BUZZER_PlayTones(tones_3beep);
+    }
+}
+
+static void handle_playing_packet(uint8_t cmd, const char* rx_name) {
+    if (!packet_is_from_opponent(rx_name)) {
+        return;
+    }
+
+    if (cmd == CMD_I_DIED) {
+        task_post_pure_msg(AR_GAME_WORLD_ID, AR_GAME_WORLD_WIN);
+    }
+    else if (cmd == CMD_ATTACK) {
+        task_post_pure_msg(AR_GAME_WORLD_ID, AR_GAME_WORLD_ATTACK_BEGIN);
+    }
+}
+
 void ar_game_rf_poll() {
     static uint8_t rx_data[5];
 
@@ -97,65 +137,11 @@ void ar_game_rf_poll() {
         char rx_name[4] = { (char)rx_data[1], (char)rx_data[2], (char)rx_data[3], '\0' };
 
         if (ar_game_mp_state == AR_DINO_MP_WAITING) {
-            if (cmd == CMD_READY) {
-                if (lobby_state == 0) {
-                    strcpy(opponent_name, rx_name);
-                    lobby_state = 2;
-                    BUZZER_PlayTones(tones_cc);
-                }
-                else if (lobby_state == 1) {
-                    strcpy(opponent_name, rx_name);
-                    rf_send_cmd(CMD_ACCEPT);
-                    start_match();
-                }
-            }
-            else if (cmd == CMD_ACCEPT && lobby_state == 1) {
-                strcpy(opponent_name, rx_name);
-                start_match();
-            }
-            else if (cmd == CMD_REJECT && lobby_state == 1) {
-                lobby_state = 0;
-                BUZZER_PlayTones(tones_3beep);
-            }
+            handle_waiting_packet(cmd, rx_name);
         }
         else if (ar_game_mp_state == AR_DINO_MP_PLAYING) {
-            if (strcmp(rx_name, opponent_name) == 0 || opponent_name[0] == '\0') {
-                if (cmd == CMD_I_DIED) {
-                    task_post_pure_msg(AR_GAME_WORLD_ID, AR_GAME_WORLD_WIN);
-                }
-                else if (cmd == CMD_ATTACK) {
-                    task_post_pure_msg(AR_GAME_WORLD_ID, AR_GAME_WORLD_ATTACK_BEGIN);
-                }
-            }
+            handle_playing_packet(cmd, rx_name);
         }
-    }
-}
-
-void ar_game_rf_render_lobby() {
-    view_render.setTextSize(1);
-    if (lobby_state == 0) {
-        view_render.setCursor(15, 15);
-        view_render.print("MY NAME: [");
-        view_render.print(my_name);
-        view_render.print("]");
-        view_render.setCursor(15, 35);
-        view_render.print("BTN DOWN TO READY");
-    }
-    else if (lobby_state == 1) {
-        view_render.setCursor(15, 15);
-        view_render.print("WAITING REPLY...");
-        view_render.setCursor(15, 35);
-        view_render.print("BTN DOWN TO SOLO");
-    }
-    else if (lobby_state == 2) {
-        view_render.setCursor(10, 10);
-        view_render.print("[");
-        view_render.print(opponent_name);
-        view_render.print("] INVITES!");
-        view_render.setCursor(10, 30);
-        view_render.print("UP  : ACCEPT");
-        view_render.setCursor(10, 45);
-        view_render.print("DOWN: REJECT");
     }
 }
 
@@ -207,6 +193,34 @@ void ar_game_rf_start_solo() {
         opponent_name[0] = '\0';
         rf_send_cmd(CMD_START);
         start_match();
+    }
+}
+
+void ar_game_rf_render_lobby() {
+    view_render.setTextSize(1);
+    if (lobby_state == 0) {
+        view_render.setCursor(15, 15);
+        view_render.print("MY NAME: [");
+        view_render.print(my_name);
+        view_render.print("]");
+        view_render.setCursor(15, 35);
+        view_render.print("BTN DOWN TO READY");
+    }
+    else if (lobby_state == 1) {
+        view_render.setCursor(15, 15);
+        view_render.print("WAITING REPLY...");
+        view_render.setCursor(15, 35);
+        view_render.print("BTN DOWN TO SOLO");
+    }
+    else if (lobby_state == 2) {
+        view_render.setCursor(10, 10);
+        view_render.print("[");
+        view_render.print(opponent_name);
+        view_render.print("] INVITES!");
+        view_render.setCursor(10, 30);
+        view_render.print("UP  : ACCEPT");
+        view_render.setCursor(10, 45);
+        view_render.print("DOWN: REJECT");
     }
 }
 

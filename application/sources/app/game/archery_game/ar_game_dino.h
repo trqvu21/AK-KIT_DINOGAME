@@ -10,11 +10,11 @@
 
 extern ar_game_dino_t dino;
 
-void ar_game_dino_render();
-void ar_game_dino_update();
-void ar_game_dino_jump();
 void ar_game_dino_reset();
+void ar_game_dino_jump();
+void ar_game_dino_update();
 bool ar_game_dino_hit_test(const ar_game_object_t* obj);
+void ar_game_dino_render();
 void ar_game_dino_handle(ak_msg_t* msg);
 
-#endif //__AR_GAME_DINO_H__
+#endif

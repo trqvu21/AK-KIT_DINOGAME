@@ -13,6 +13,23 @@ uint16_t ar_game_attack_timer = 0;
 static uint8_t speed_level = 0;
 static uint8_t speed_up_notice_timer = 0;
 
+static int32_t world_base_speed() {
+    int32_t speed = AR_DINO_BASE_SPEED_SCALED;
+    speed += (settingsetup.num_arrow - 1) * AR_DINO_SETTING_SPEED_STEP;
+    speed += (ar_game_score / AR_DINO_SCORE_STEP) * AR_DINO_SPEED_STEP;
+
+    return speed > AR_DINO_MAX_BASE_SPEED ? AR_DINO_MAX_BASE_SPEED : speed;
+}
+
+static void world_update_speed_notice() {
+    uint8_t next_speed_level = ar_game_score / AR_DINO_SCORE_STEP;
+
+    if (next_speed_level > speed_level) {
+        speed_level = next_speed_level;
+        speed_up_notice_timer = 90;
+    }
+}
+
 void ar_game_world_reset() {
     ar_game_score = 0;
     ar_game_frame_skip = 0;
@@ -23,24 +40,12 @@ void ar_game_world_reset() {
 }
 
 void ar_game_world_update() {
-    int32_t start_speed_bonus = (settingsetup.num_arrow - 1) * AR_DINO_SETTING_SPEED_STEP;
-    int32_t base_speed = AR_DINO_BASE_SPEED_SCALED + start_speed_bonus;
-    uint8_t next_speed_level = ar_game_score / AR_DINO_SCORE_STEP;
+    world_update_speed_notice();
 
-    if (next_speed_level > speed_level) {
-        speed_level = next_speed_level;
-        speed_up_notice_timer = 90;
-    }
-
-    base_speed += (ar_game_score / AR_DINO_SCORE_STEP) * AR_DINO_SPEED_STEP;
-    if (base_speed > AR_DINO_MAX_BASE_SPEED) {
-        base_speed = AR_DINO_MAX_BASE_SPEED;
-    }
-
-    ar_game_current_speed = base_speed;
+    ar_game_current_speed = world_base_speed();
     if (ar_game_attack_timer > 0) {
         ar_game_attack_timer--;
-        ar_game_current_speed = base_speed + AR_DINO_ATTACK_BONUS_SPEED;
+        ar_game_current_speed += AR_DINO_ATTACK_BONUS_SPEED;
     }
 
     if (speed_up_notice_timer > 0) {
@@ -60,7 +65,6 @@ void ar_game_world_render_hud() {
     view_render.setCursor(82, 3);
     view_render.print("S:");
     view_render.print(ar_game_score);
-
 }
 
 void ar_game_world_render_attack_warning() {
