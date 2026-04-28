@@ -76,8 +76,9 @@ Phiên bản hiện tại đã tách logic khỏi `scr_archery_game.cpp`. Screen
 Kiến trúc vẫn giữ số lượng task game hiện có để tránh tăng rủi ro tràn bộ nhớ, nhưng đổi vai trò thành các module Dino rõ ràng hơn.
 
 ### 2.2 Sơ đồ trình tự
+**Sơ đồ trình tự** được sử dụng để mô tả trình tự của các Message và luồng tương tác giữa các đối tượng trong một hệ thống.
 
-<p align="center"><img src="resources/images/sq.webp" alt="AK Embedded Base Kit - STM32L151" width="480"/></p>
+<p align="center"><img src="resources/images/sq.webp" alt="AK Embedded Base Kit - STM32L151" width="720"/></p>
 <p align="center"><strong><em>Hình 3:</em></strong> The sequence diagram</p>
 
 ### 2.3 Message và Signal chính
