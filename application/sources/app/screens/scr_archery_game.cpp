@@ -3,6 +3,7 @@
 uint8_t ar_game_state = 0;
 ar_game_setting_t settingsetup;
 static uint8_t gameplay_tick_divider = 0;
+static uint8_t lobby_render_divider = 0;
 
 static void ar_game_setup_modules() {
     ar_game_world_reset();
@@ -55,6 +56,7 @@ void scr_archery_game_handle(ak_msg_t* msg) {
         ar_game_state = GAME_PLAY;
         ar_game_mp_state = AR_DINO_MP_WAITING;
         gameplay_tick_divider = 0;
+        lobby_render_divider = 0;
         ar_game_setup_modules();
         timer_set(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK, 10, TIMER_ONE_SHOT);
     }
@@ -74,6 +76,12 @@ void scr_archery_game_handle(ak_msg_t* msg) {
         }
         else {
             gameplay_tick_divider = 0;
+            lobby_render_divider++;
+            if (lobby_render_divider >= 10) {
+                lobby_render_divider = 0;
+                view_scr_dino_game();
+                view_render.update();
+            }
         }
 
         timer_set(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK, 10, TIMER_ONE_SHOT);
@@ -90,12 +98,7 @@ void scr_archery_game_handle(ak_msg_t* msg) {
         break;
 
     case AC_DISPLAY_BUTTON_UP_RELEASED: {
-        if (ar_game_mp_state == AR_DINO_MP_WAITING) {
-            ar_game_rf_accept();
-        }
-        else {
-            SCREEN_NONE_UPDATE_MASK();
-        }
+        SCREEN_NONE_UPDATE_MASK();
     }
         break;
 

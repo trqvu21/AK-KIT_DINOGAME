@@ -31,6 +31,7 @@
 
 typedef enum {
     AR_DINO_MP_WAITING = 0,
+    AR_DINO_MP_STARTING,
     AR_DINO_MP_PLAYING,
     AR_DINO_MP_LOSE,
     AR_DINO_MP_WIN,

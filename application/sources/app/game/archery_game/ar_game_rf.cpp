@@ -19,16 +19,22 @@ extern uint8_t current_rf_channel;
 
 static uint8_t RF_ADDR[] = { 0xE7, 0xE7, 0xE7, 0xE7, 0xE7 };
 
-#define CMD_START    1
-#define CMD_I_DIED   2
-#define CMD_ATTACK   3
-#define CMD_READY    4
-#define CMD_ACCEPT   5
-#define CMD_REJECT   6
+#define CMD_START       1
+#define CMD_I_DIED      2
+#define CMD_ATTACK      3
+#define CMD_READY       4
+#define CMD_HELLO       5
+#define CMD_STARTING    6
+
+#define RF_ROOM_TICK    50
+#define RF_START_TICK   150
 
 static char my_name[4] = "P00";
 static char opponent_name[4] = "";
-static uint8_t lobby_state = 0;
+static bool local_ready = false;
+static bool remote_ready = false;
+static uint8_t room_tick = 0;
+static uint8_t starting_tick = 0;
 
 static void rf_mode_rx() {
     nRF24_RXMode(nRF24_RX_PIPE0,
@@ -89,30 +95,82 @@ static void start_match() {
     BUZZER_PlayTones(tones_startup);
 }
 
+static void begin_starting(bool notify_peer) {
+    if (ar_game_mp_state == AR_DINO_MP_STARTING || ar_game_mp_state == AR_DINO_MP_PLAYING) {
+        return;
+    }
+
+    ar_game_mp_state = AR_DINO_MP_STARTING;
+    starting_tick = RF_START_TICK;
+    BUZZER_PlayTones(tones_startup);
+
+    if (notify_peer) {
+        rf_send_cmd(CMD_STARTING);
+    }
+}
+
 static bool packet_is_from_opponent(const char* rx_name) {
     return strcmp(rx_name, opponent_name) == 0 || opponent_name[0] == '\0';
 }
 
-static void handle_waiting_packet(uint8_t cmd, const char* rx_name) {
-    if (cmd == CMD_READY) {
-        if (lobby_state == 0) {
-            strcpy(opponent_name, rx_name);
-            lobby_state = 2;
-            BUZZER_PlayTones(tones_cc);
-        }
-        else if (lobby_state == 1) {
-            strcpy(opponent_name, rx_name);
-            rf_send_cmd(CMD_ACCEPT);
-            start_match();
-        }
-    }
-    else if (cmd == CMD_ACCEPT && lobby_state == 1) {
+static void remember_opponent(const char* rx_name) {
+    if (strcmp(rx_name, my_name) != 0) {
         strcpy(opponent_name, rx_name);
+    }
+}
+
+static void try_begin_starting() {
+    if (local_ready && remote_ready && opponent_name[0] != '\0') {
+        begin_starting(true);
+    }
+}
+
+static void tick_room_broadcast() {
+    if (ar_game_mp_state != AR_DINO_MP_WAITING) {
+        return;
+    }
+
+    room_tick++;
+    if (room_tick >= RF_ROOM_TICK) {
+        room_tick = 0;
+        rf_send_cmd(local_ready ? CMD_READY : CMD_HELLO);
+    }
+}
+
+static void tick_starting() {
+    if (ar_game_mp_state != AR_DINO_MP_STARTING) {
+        return;
+    }
+
+    if (starting_tick > 0) {
+        starting_tick--;
+    }
+
+    if (starting_tick == 0) {
         start_match();
     }
-    else if (cmd == CMD_REJECT && lobby_state == 1) {
-        lobby_state = 0;
-        BUZZER_PlayTones(tones_3beep);
+}
+
+static void handle_waiting_packet(uint8_t cmd, const char* rx_name) {
+    if (strcmp(rx_name, my_name) == 0) {
+        return;
+    }
+
+    if (cmd == CMD_HELLO) {
+        remember_opponent(rx_name);
+    }
+    else if (cmd == CMD_READY) {
+        remember_opponent(rx_name);
+        if (!remote_ready) {
+            remote_ready = true;
+            BUZZER_PlayTones(tones_cc);
+        }
+        try_begin_starting();
+    }
+    else if (cmd == CMD_STARTING || cmd == CMD_START) {
+        remember_opponent(rx_name);
+        remote_ready = true;
+        begin_starting(false);
     }
 }
 
@@ -132,12 +190,20 @@ static void handle_playing_packet(uint8_t cmd, const char* rx_name) {
 void ar_game_rf_poll() {
     static uint8_t rx_data[5];
 
+    tick_room_broadcast();
+    tick_starting();
+
     if (nRF24_RXPacket(rx_data, 5) == nRF24_RX_PCKT_PIPE0) {
         uint8_t cmd = rx_data[0];
         char rx_name[4] = { (char)rx_data[1], (char)rx_data[2], (char)rx_data[3], '\0' };
 
         if (ar_game_mp_state == AR_DINO_MP_WAITING) {
             handle_waiting_packet(cmd, rx_name);
+        }
+        else if (ar_game_mp_state == AR_DINO_MP_STARTING) {
+            if (cmd == CMD_STARTING || cmd == CMD_START) {
+                begin_starting(false);
+            }
         }
         else if (ar_game_mp_state == AR_DINO_MP_PLAYING) {
             handle_playing_packet(cmd, rx_name);
@@ -147,80 +213,105 @@ void ar_game_rf_poll() {
 
 void ar_game_rf_setup() {
     init_player_name();
-    lobby_state = 0;
+    local_ready = false;
+    remote_ready = false;
+    room_tick = 0;
+    starting_tick = 0;
     opponent_name[0] = '\0';
     rf_init_hardware_kit();
     rf_mode_rx();
+    rf_send_cmd(CMD_HELLO);
 }
 
 void ar_game_rf_ready() {
-    if (ar_game_mp_state == AR_DINO_MP_WAITING) {
-        if (lobby_state == 0) {
-            lobby_state = 1;
-            rf_send_cmd(CMD_READY);
-            BUZZER_PlayTones(tones_cc);
-        }
-        else if (lobby_state == 1) {
-            lobby_state = 3;
-            opponent_name[0] = '\0';
-            rf_send_cmd(CMD_START);
-            start_match();
-        }
-        else if (lobby_state == 2) {
-            ar_game_rf_reject();
-        }
+    if (ar_game_mp_state != AR_DINO_MP_WAITING) {
+        return;
     }
+
+    if (local_ready && !remote_ready && opponent_name[0] == '\0') {
+        opponent_name[0] = '\0';
+        begin_starting(false);
+        return;
+    }
+
+    local_ready = true;
+    room_tick = 0;
+    rf_send_cmd(CMD_READY);
+    BUZZER_PlayTones(tones_cc);
+    try_begin_starting();
 }
 
 void ar_game_rf_accept() {
-    if (ar_game_mp_state == AR_DINO_MP_WAITING && lobby_state == 2) {
-        rf_send_cmd(CMD_ACCEPT);
-        start_match();
-    }
+    ar_game_rf_ready();
 }
 
 void ar_game_rf_reject() {
-    if (ar_game_mp_state == AR_DINO_MP_WAITING && lobby_state == 2) {
-        rf_send_cmd(CMD_REJECT);
-        lobby_state = 0;
-        BUZZER_PlayTones(tones_cc);
-    }
+    local_ready = false;
+    remote_ready = false;
+    opponent_name[0] = '\0';
+    rf_send_cmd(CMD_HELLO);
 }
 
 void ar_game_rf_start_solo() {
-    if (ar_game_mp_state == AR_DINO_MP_WAITING && lobby_state == 1) {
-        lobby_state = 3;
+    if (ar_game_mp_state == AR_DINO_MP_WAITING) {
         opponent_name[0] = '\0';
-        rf_send_cmd(CMD_START);
-        start_match();
+        begin_starting(false);
     }
 }
 
 void ar_game_rf_render_lobby() {
     view_render.setTextSize(1);
-    if (lobby_state == 0) {
-        view_render.setCursor(15, 15);
-        view_render.print("MY NAME: [");
-        view_render.print(my_name);
-        view_render.print("]");
-        view_render.setCursor(15, 35);
-        view_render.print("BTN DOWN TO READY");
+
+    if (ar_game_mp_state == AR_DINO_MP_STARTING) {
+        uint8_t count = (starting_tick / 50) + 1;
+        if (count > 3) {
+            count = 3;
+        }
+
+        view_render.drawRoundRect(14, 8, 100, 46, 3, WHITE);
+        view_render.setCursor(36, 16);
+        view_render.print("STARTING");
+        view_render.setTextSize(2);
+        view_render.setCursor(57, 30);
+        view_render.print(count);
+        view_render.setTextSize(1);
+        return;
     }
-    else if (lobby_state == 1) {
-        view_render.setCursor(15, 15);
-        view_render.print("WAITING REPLY...");
-        view_render.setCursor(15, 35);
-        view_render.print("BTN DOWN TO SOLO");
-    }
-    else if (lobby_state == 2) {
-        view_render.setCursor(10, 10);
-        view_render.print("[");
+
+    view_render.drawRoundRect(0, 0, 128, 64, 2, WHITE);
+    view_render.setCursor(34, 4);
+    view_render.print("DINO ROOM");
+    view_render.drawFastHLine(8, 14, 112, WHITE);
+
+    view_render.setCursor(10, 21);
+    view_render.print("YOU [");
+    view_render.print(my_name);
+    view_render.print("]");
+    view_render.setCursor(86, 21);
+    view_render.print(local_ready ? "READY" : "WAIT");
+
+    view_render.setCursor(10, 34);
+    if (opponent_name[0] != '\0') {
+        view_render.print("P2  [");
         view_render.print(opponent_name);
-        view_render.print("] INVITES!");
-        view_render.setCursor(10, 30);
-        view_render.print("UP  : ACCEPT");
-        view_render.setCursor(10, 45);
-        view_render.print("DOWN: REJECT");
+        view_render.print("]");
+        view_render.setCursor(86, 34);
+        view_render.print(remote_ready ? "READY" : "WAIT");
+    }
+    else {
+        view_render.print("P2  [---]");
+        view_render.setCursor(83, 34);
+        view_render.print("EMPTY");
+    }
+
+    view_render.drawFastHLine(8, 48, 112, WHITE);
+    if (local_ready && !remote_ready && opponent_name[0] == '\0') {
+        view_render.setCursor(10, 53);
+        view_render.print("BTN DOWN PLAY SOLO");
+    }
+    else {
+        view_render.setCursor(19, 53);
+        view_render.print(local_ready ? "WAITING PLAYER" : "BTN DOWN READY");
     }
 }
 
@@ -275,7 +366,10 @@ void ar_game_rf_handle(ak_msg_t* msg) {
 
     case AR_GAME_RF_RESET: {
         APP_DBG_SIG("AR_GAME_RF_RESET\n");
-        lobby_state = 0;
+        local_ready = false;
+        remote_ready = false;
+        room_tick = 0;
+        starting_tick = 0;
         opponent_name[0] = '\0';
         rf_mode_rx();
     }

@@ -34,13 +34,13 @@ KIT tích hợp LCD **OLED 1.3"**, **3 nút nhấn**, **Buzzer**, **NRF24L01+**,
 
 #### 1.2.2 Cách chơi
 
-- Khi vào game, thiết bị hiển thị tên ngẫu nhiên dạng `MY NAME: [P73]`.
-- Nhấn `DOWN` để gửi trạng thái Ready và chờ đối thủ.
-- Thiết bị nhận lời mời hiển thị `[Pxx] INVITES!`.
-- Nhấn `UP` để chấp nhận, nhấn `DOWN` để từ chối.
-- Khi đang chờ phản hồi, nhấn `DOWN` thêm một lần để vào chế độ Solo.
+- Khi vào game, thiết bị hiển thị phòng `DINO ROOM` và tên ngẫu nhiên dạng `[P73]`.
+- Hai kit chọn cùng phòng sẽ thấy ID của nhau trong lobby.
+- Nhấn `DOWN` để chuyển trạng thái của kit hiện tại sang `READY`.
+- Nếu chỉ có một kit trong phòng sau khi Ready, màn hình hiện `BTN DOWN PLAY SOLO`; nhấn `DOWN` lần nữa để chơi một mình.
+- Khi cả hai kit đều `READY`, hai màn hình hiện `STARTING` rồi game bắt đầu.
 - Khi chơi, nhấn `UP` để Dino nhảy, giữ `DOWN` để Dino cúi.
-- Game kết thúc khi Dino va vào Cactus hoặc Bird.
+- Game kết thúc khi Dino va vào Cactus hoặc Bird; kit chết trước hiện `YOU LOSE`, kit còn lại hiện `YOU WIN`.
 
 #### 1.2.3 Cơ chế điểm và độ khó
 
@@ -70,7 +70,7 @@ Phiên bản hiện tại đã tách logic khỏi `scr_archery_game.cpp`. Screen
 | `ar_game_objects` | Quản lý Cactus, Bird, Gift, spawn, recycle và va chạm. |
 | `ar_game_background` | Quản lý mây và nền. |
 | `ar_game_world` | Quản lý điểm, tốc độ, level, trạng thái win/lose và hiệu ứng speed up. |
-| `ar_game_rf` | Quản lý NRF24L01+, lobby, ready/accept/reject/solo, attack và died command. |
+| `ar_game_rf` | Quản lý NRF24L01+, room lobby, hello/ready/starting, attack và died command. |
 | `scr_archery_game` | Điều phối Screen Entry, Timer Tick, Button Event và Render. |
 
 Kiến trúc vẫn giữ số lượng task game hiện có để tránh tăng rủi ro tràn bộ nhớ, nhưng đổi vai trò thành các module Dino rõ ràng hơn.
@@ -78,8 +78,104 @@ Kiến trúc vẫn giữ số lượng task game hiện có để tránh tăng r
 ### 2.2 Sơ đồ trình tự
 **Sơ đồ trình tự** được sử dụng để mô tả trình tự của các Message và luồng tương tác giữa các đối tượng trong một hệ thống.
 
-<p align="center"><img src="resources/images/sq.webp" alt="AK Embedded Base Kit - STM32L151" width="720"/></p>
-<p align="center"><strong><em>Hình 3:</em></strong> The sequence diagram</p>
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Player
+    participant Screen as scr_archery_game
+    participant RF as ar_game_rf
+    participant NRF as NRF24L01+
+    participant World as ar_game_world
+    participant Dino as ar_game_dino
+    participant Background as ar_game_background
+    participant Objects as ar_game_objects
+    participant GameOver as scr_game_over
+    participant OLED as view_render
+
+    Note over Screen, NRF: SCREEN_ENTRY - Khởi tạo game và vào phòng
+    Player->>Screen: SCREEN_ENTRY
+    Screen->>World: ar_game_world_reset()
+    Screen->>Dino: ar_game_dino_reset()
+    Screen->>Objects: ar_game_objects_reset()
+    Screen->>Background: ar_game_background_reset()
+    Screen->>RF: ar_game_rf_setup()
+    RF->>RF: init_player_name()
+    RF->>NRF: rf_init_hardware_kit()
+    RF->>NRF: rf_mode_rx()
+    RF->>NRF: rf_send_cmd(CMD_HELLO)
+    Screen->>Screen: timer_set(AR_GAME_TIME_TICK, 10ms)
+
+    Note over Screen, RF: ROOM LOBBY - Hiện ID các kit trong phòng
+    loop AR_GAME_TIME_TICK khi đang WAITING
+        Screen->>RF: ar_game_rf_poll()
+        RF->>RF: tick_room_broadcast()
+        alt room_tick >= RF_ROOM_TICK
+            RF->>NRF: rf_send_cmd(CMD_HELLO hoặc CMD_READY)
+        end
+        RF->>NRF: nRF24_RXPacket(rx_data, 5)
+        alt cmd == CMD_HELLO
+            RF->>RF: remember_opponent(rx_name)
+        else cmd == CMD_READY
+            RF->>RF: remote_ready = true
+            RF->>RF: try_begin_starting()
+        end
+        Screen->>OLED: ar_game_rf_render_lobby()
+    end
+
+    Note over Player, RF: READY / SOLO - Điều khiển trong phòng
+    Player->>Screen: AC_DISPLAY_BUTTON_DOWN_RELEASED
+    Screen->>RF: ar_game_rf_ready()
+    alt Chỉ có một kit trong phòng và đã READY
+        RF->>RF: begin_starting(false)
+    else Kit hiện tại chưa READY
+        RF->>RF: local_ready = true
+        RF->>NRF: rf_send_cmd(CMD_READY)
+    else Hai kit đều READY
+        RF->>RF: begin_starting(true)
+        RF->>NRF: rf_send_cmd(CMD_STARTING)
+    end
+
+    Note over RF, OLED: STARTING - Countdown trước khi chạy
+    loop ar_game_mp_state == AR_DINO_MP_STARTING
+        Screen->>RF: ar_game_rf_poll()
+        RF->>RF: tick_starting()
+        Screen->>OLED: ar_game_rf_render_lobby()
+    end
+    RF->>World: ar_game_world_reset()
+    RF->>Dino: ar_game_dino_reset()
+    RF->>Objects: ar_game_objects_reset()
+    RF->>Background: ar_game_background_reset()
+    RF->>RF: ar_game_mp_state = AR_DINO_MP_PLAYING
+
+    Note over Screen, OLED: GAMEPLAY - Update và render frame
+    loop ar_game_mp_state == AR_DINO_MP_PLAYING
+        Screen->>RF: ar_game_rf_poll()
+        Screen->>World: ar_game_world_update()
+        Screen->>Dino: ar_game_dino_update()
+        Screen->>Background: ar_game_background_update()
+        Screen->>Objects: ar_game_objects_update()
+        Objects->>Dino: ar_game_dino_hit_test(obj)
+        Screen->>OLED: view_scr_dino_game()
+        Screen->>OLED: view_render.update()
+    end
+
+    Note over Objects, GameOver: Kết thúc ván
+    alt Dino đụng Cactus hoặc Bird
+        Objects->>RF: task_post_pure_msg(AR_GAME_RF_ID, AR_GAME_RF_SEND_DIED)
+        RF->>NRF: rf_send_cmd(CMD_I_DIED)
+        Objects->>World: task_post_pure_msg(AR_GAME_WORLD_ID, AR_GAME_WORLD_LOSE)
+        World->>GameOver: SCREEN_TRAN(scr_game_over_handle, &scr_game_over)
+    else Dino ăn Gift
+        Objects->>World: ar_game_score += 5
+        Objects->>RF: task_post_pure_msg(AR_GAME_RF_ID, AR_GAME_RF_SEND_ATTACK)
+        RF->>NRF: rf_send_cmd(CMD_ATTACK)
+    else Nhận CMD_ATTACK
+        RF->>World: task_post_pure_msg(AR_GAME_WORLD_ID, AR_GAME_WORLD_ATTACK_BEGIN)
+    else Nhận CMD_I_DIED
+        RF->>World: task_post_pure_msg(AR_GAME_WORLD_ID, AR_GAME_WORLD_WIN)
+        World->>GameOver: SCREEN_TRAN(scr_game_over_handle, &scr_game_over)
+    end
+```
 
 ### 2.3 Message và Signal chính
 
@@ -88,9 +184,9 @@ Kiến trúc vẫn giữ số lượng task game hiện có để tránh tăng r
 | Screen | `SCREEN_ENTRY` | Khởi tạo game, đọc setting, reset module và setup RF. |
 | Screen | `AR_GAME_TIME_TICK` | Tick 10ms, poll RF và chia nhịp gameplay. |
 | Button | `AC_DISPLAY_BUTTON_UP_PRESSED` | Nhảy khi đang chơi. |
-| Button | `AC_DISPLAY_BUTTON_UP_RELEASED` | Accept lời mời khi đang ở lobby. |
-| Button | `AC_DISPLAY_BUTTON_DOWN_RELEASED` | Ready, Solo hoặc Reject trong lobby. |
-| RF | `CMD_READY`, `CMD_ACCEPT`, `CMD_REJECT` | Matchmaking giữa hai thiết bị. |
+| Button | `AC_DISPLAY_BUTTON_UP_RELEASED` | Không dùng trong lobby mới, chỉ mask update. |
+| Button | `AC_DISPLAY_BUTTON_DOWN_RELEASED` | Ready trong phòng chờ. |
+| RF | `CMD_HELLO`, `CMD_READY`, `CMD_STARTING` | Hiện ID trong phòng, đồng bộ Ready và countdown Starting. |
 | RF | `CMD_ATTACK`, `CMD_I_DIED` | Tấn công và báo kết thúc ván. |
 
 ### 2.4 Task
@@ -128,8 +224,8 @@ Trong code, game vẫn tái sử dụng các Task ID cũ của project để kh�
 | Background | `AR_GAME_BACKGROUND_UPDATE` | Di chuyển cloud nền. |
 | RF | `AR_GAME_RF_SETUP` | Khởi tạo tên người chơi và NRF24. |
 | RF | `AR_GAME_RF_POLL` | Đọc packet RF nếu có. |
-| RF | `AR_GAME_RF_READY` | Ready, Solo hoặc Reject tùy `lobby_state`. |
-| RF | `AR_GAME_RF_ACCEPT` | Chấp nhận lời mời và start match. |
+| RF | `AR_GAME_RF_READY` | Đặt `local_ready`, gửi `CMD_READY`, bắt đầu Starting nếu đủ 2 Ready. |
+| RF | `AR_GAME_RF_ACCEPT` | Giữ tương thích, hiện gọi cùng logic với `ar_game_rf_ready()`. |
 | RF | `AR_GAME_RF_SEND_ATTACK` | Gửi `CMD_ATTACK`. |
 | RF | `AR_GAME_RF_SEND_DIED` | Gửi `CMD_I_DIED`. |
 
@@ -419,46 +515,47 @@ sequenceDiagram
     participant BG as ar_game_background
 
     rect rgba(0, 180, 80, 0.12)
-    Note over Screen, NRF: RF SETUP
+    Note over Screen, NRF: SETUP - Khởi tạo phòng
     Screen->>RF: ar_game_rf_setup()
     activate RF
     RF->>RF: init_player_name()
-    RF->>RF: lobby_state = 0
+    RF->>RF: local_ready = false
+    RF->>RF: remote_ready = false
     RF->>RF: opponent_name[0] = '\0'
     RF->>NRF: rf_init_hardware_kit()
     RF->>NRF: rf_mode_rx()
+    RF->>NRF: rf_send_cmd(CMD_HELLO)
     deactivate RF
     end
 
     rect rgba(255, 200, 0, 0.14)
-    Note over Screen, NRF: SEND - Gửi lệnh lobby
-    Screen->>RF: ar_game_rf_ready()
+    Note over Screen, NRF: ROOM - Broadcast ID trong phòng
+    Screen->>RF: ar_game_rf_poll()
     activate RF
-    alt lobby_state == 0
-        RF->>RF: lobby_state = 1
-        RF->>NRF: rf_send_cmd(CMD_READY)
-    else lobby_state == 1
-        RF->>RF: lobby_state = 3
-        RF->>RF: opponent_name[0] = '\0'
-        RF->>NRF: rf_send_cmd(CMD_START)
-        RF->>RF: start_match()
-    else lobby_state == 2
-        RF->>RF: ar_game_rf_reject()
-        RF->>NRF: rf_send_cmd(CMD_REJECT)
+    RF->>RF: tick_room_broadcast()
+    alt ar_game_mp_state == AR_DINO_MP_WAITING && room_tick >= RF_ROOM_TICK
+        RF->>NRF: rf_send_cmd(CMD_HELLO hoặc CMD_READY)
     end
     deactivate RF
+    end
 
-    Screen->>RF: ar_game_rf_accept()
+    rect rgba(255, 200, 0, 0.14)
+    Note over Screen, NRF: READY - Người chơi nhấn BTN DOWN
+    Screen->>RF: ar_game_rf_ready()
     activate RF
-    alt ar_game_mp_state == AR_DINO_MP_WAITING && lobby_state == 2
-        RF->>NRF: rf_send_cmd(CMD_ACCEPT)
-        RF->>RF: start_match()
+    alt local_ready == true && remote_ready == false
+        RF->>RF: opponent_name[0] = '\0'
+        RF->>RF: begin_starting(false)
+    else ar_game_mp_state == AR_DINO_MP_WAITING
+        RF->>RF: local_ready = true
+        RF->>NRF: rf_send_cmd(CMD_READY)
+        RF->>RF: try_begin_starting()
     end
     deactivate RF
     end
 
     rect rgba(0, 140, 255, 0.12)
-    Note over Screen, World: RECEIVE - Nhận packet từ đối thủ
+    Note over Screen, World: RECEIVE - Nhận packet từ kit còn lại
     Screen->>RF: ar_game_rf_poll()
     activate RF
     RF->>NRF: nRF24_RXPacket(rx_data, 5)
@@ -467,11 +564,26 @@ sequenceDiagram
         RF->>RF: rx_name = rx_data[1..3]
         alt ar_game_mp_state == AR_DINO_MP_WAITING
             RF->>RF: handle_waiting_packet(cmd, rx_name)
+        else ar_game_mp_state == AR_DINO_MP_STARTING
+            RF->>RF: tick_starting()
         else ar_game_mp_state == AR_DINO_MP_PLAYING
             RF->>RF: handle_playing_packet(cmd, rx_name)
         end
     end
     deactivate RF
+    end
+
+    rect rgba(255, 80, 80, 0.12)
+    Note over RF, World: WAITING COMMAND - Đồng bộ phòng
+    alt cmd == CMD_HELLO
+        RF->>RF: remember_opponent(rx_name)
+    else cmd == CMD_READY
+        RF->>RF: remember_opponent(rx_name)
+        RF->>RF: remote_ready = true
+        RF->>RF: try_begin_starting()
+    else cmd == CMD_STARTING
+        RF->>RF: begin_starting(false)
+    end
     end
 
     rect rgba(255, 80, 80, 0.12)
@@ -485,7 +597,11 @@ sequenceDiagram
     end
 
     rect rgba(120, 120, 255, 0.10)
-    Note over RF, BG: START MATCH - Reset module và bắt đầu trận
+    Note over RF, BG: START MATCH - Starting rồi bắt đầu trận
+    RF->>RF: begin_starting(true)
+    RF->>NRF: rf_send_cmd(CMD_STARTING)
+    RF->>RF: ar_game_mp_state = AR_DINO_MP_STARTING
+    RF->>RF: tick_starting()
     RF->>RF: start_match()
     activate RF
     RF->>World: ar_game_world_reset()
@@ -558,6 +674,7 @@ sequenceDiagram
     Screen->>Screen: ar_game_state = GAME_PLAY
     Screen->>Screen: ar_game_mp_state = AR_DINO_MP_WAITING
     Screen->>Screen: gameplay_tick_divider = 0
+    Screen->>Screen: lobby_render_divider = 0
     Screen->>World: ar_game_world_reset()
     Screen->>Dino: ar_game_dino_reset()
     Screen->>Objects: ar_game_objects_reset()
@@ -585,6 +702,11 @@ sequenceDiagram
         end
     else ar_game_mp_state != AR_DINO_MP_PLAYING
         Screen->>Screen: gameplay_tick_divider = 0
+        Screen->>Screen: lobby_render_divider++
+        alt lobby_render_divider >= 10
+            Screen->>Screen: view_scr_dino_game()
+            Screen->>OLED: view_render.update()
+        end
     end
     Screen->>AK: timer_set(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK, 10, TIMER_ONE_SHOT)
     Screen->>Screen: SCREEN_NONE_UPDATE_MASK()
@@ -603,11 +725,7 @@ sequenceDiagram
 
     Player->>Screen: AC_DISPLAY_BUTTON_UP_RELEASED
     activate Screen
-    alt ar_game_mp_state == AR_DINO_MP_WAITING
-        Screen->>RF: ar_game_rf_accept()
-    else đang chơi
-        Screen->>Screen: SCREEN_NONE_UPDATE_MASK()
-    end
+    Screen->>Screen: SCREEN_NONE_UPDATE_MASK()
     deactivate Screen
 
     Player->>Screen: AC_DISPLAY_BUTTON_DOWN_RELEASED
@@ -819,10 +937,10 @@ Các command chính:
 
 | Command | Ý nghĩa |
 |---|---|
-| `CMD_READY` | Gửi lời mời/chờ đối thủ. |
-| `CMD_ACCEPT` | Chấp nhận lời mời. |
-| `CMD_REJECT` | Từ chối lời mời. |
-| `CMD_START` | Bắt đầu solo/local start. |
+| `CMD_HELLO` | Broadcast ID để các kit cùng phòng thấy nhau. |
+| `CMD_READY` | Báo kit hiện tại đã Ready. |
+| `CMD_STARTING` | Đồng bộ màn Starting trước khi chạy gameplay. |
+| `CMD_START` | Command cũ vẫn được nhận để tương thích. |
 | `CMD_ATTACK` | Gift attack, ép đối thủ speed up. |
 | `CMD_I_DIED` | Báo mình đã thua. |
 
@@ -872,7 +990,7 @@ void view_scr_dino_game() {
 |---|---|
 | `tones_cc` | Ready, nhặt Gift, xác nhận thao tác. |
 | `tones_startup` | Bắt đầu game hoặc bị attack. |
-| `tones_3beep` | Game Over hoặc reject. |
+| `tones_3beep` | Game Over khi thua. |
 
 ## VII. Build và nạp firmware
 

@@ -1,20 +1,16 @@
 #include "scr_game_over.h"
 
-extern uint32_t ar_game_score; 
+#include "ar_game_common.h"
 
-// =================================================================
-// BIẾN ANIMATION & TRẠNG THÁI
-// =================================================================
-static ar_game_score_t gamescore_over; 
+extern uint32_t ar_game_score;
+
+static ar_game_score_t gamescore_over;
 static bool is_new_record = false;
 
-static int8_t anim_y = 0;   // Dịch chuyển lên xuống cho chữ GAME OVER
-static int8_t anim_dir = 1; 
-static bool blink_state = true; // Trạng thái nhấp nháy chữ NEW BEST
+static int8_t anim_y = 0;
+static int8_t anim_dir = 1;
+static bool blink_state = true;
 
-/*****************************************************************************/
-/* View - Game Over */
-/*****************************************************************************/
 static void view_scr_game_over();
 
 view_dynamic_t dyn_view_item_game_over = {
@@ -32,22 +28,41 @@ view_screen_t scr_game_over = {
 };
 
 void view_scr_game_over() {
-	view_render.clear(); // Xóa nền
-	
-	// =========================================================
-	// 1. CHỮ "GAME OVER" LƠ LỬNG
-	// =========================================================
-	view_render.setTextSize(2);
+	view_render.clear();
+
 	view_render.setTextColor(WHITE);
 	view_render.drawFastHLine(8, 3, 112, WHITE);
 	view_render.drawPixel(4, 3, WHITE);
 	view_render.drawPixel(123, 3, WHITE);
-	view_render.setCursor(12, 7 + anim_y); // Cộng anim_y để trôi bồng bềnh
-	view_render.print("GAME OVER");
 
-	// =========================================================
-	// 2. ĐIỂM SỐ & KỶ LỤC
-	// =========================================================
+	if (ar_game_mp_state == AR_DINO_MP_WIN) {
+		int x = 8, y = 8 + anim_y;
+		view_render.drawRoundRect(x + 3, y, 10, 8, 2, WHITE);
+		view_render.drawFastHLine(x + 5, y + 8, 6, WHITE);
+		view_render.drawFastVLine(x + 8, y + 8, 4, WHITE);
+		view_render.drawFastHLine(x + 4, y + 12, 10, WHITE);
+		view_render.drawFastVLine(x, y + 2, 4, WHITE);
+		view_render.drawFastVLine(x + 16, y + 2, 4, WHITE);
+		view_render.drawLine(x, y + 2, x + 3, y + 4, WHITE);
+		view_render.drawLine(x + 16, y + 2, x + 12, y + 4, WHITE);
+		view_render.setTextSize(2);
+		view_render.setCursor(34, 9 + anim_y);
+		view_render.print("YOU WIN");
+	}
+	else {
+		int x = 8, y = 8 + anim_y;
+		view_render.drawRoundRect(x + 2, y, 14, 12, 3, WHITE);
+		view_render.drawPixel(x + 6, y + 5, WHITE);
+		view_render.drawPixel(x + 12, y + 5, WHITE);
+		view_render.drawFastHLine(x + 7, y + 9, 5, WHITE);
+		view_render.drawFastVLine(x + 5, y + 12, 4, WHITE);
+		view_render.drawFastVLine(x + 9, y + 12, 4, WHITE);
+		view_render.drawFastVLine(x + 13, y + 12, 4, WHITE);
+		view_render.setTextSize(2);
+		view_render.setCursor(28, 9 + anim_y);
+		view_render.print("YOU LOSE");
+	}
+
 	view_render.setTextSize(1);
 	view_render.drawRoundRect(16, 27, 96, 19, 2, WHITE);
 	view_render.drawFastVLine(62, 29, 15, WHITE);
@@ -57,7 +72,7 @@ void view_scr_game_over() {
 	view_render.print(ar_game_score);
 
 	if (is_new_record) {
-		// Nếu phá kỷ lục -> Nhấp nháy dòng chữ NEW BEST!
+
 		if (blink_state) {
 			view_render.fillRect(33, 46, 62, 8, WHITE);
 			view_render.setTextColor(BLACK);
@@ -67,95 +82,83 @@ void view_scr_game_over() {
 			view_render.setCursor(99, 47);
 			view_render.print(gamescore_over.score_1st);
 		}
-	} else {
-		// Nếu không phá kỷ lục -> Hiện bình thường
+	}
+	else {
+
 		view_render.setCursor(32, 47);
 		view_render.print("BEST :");
 		view_render.setCursor(75, 47);
 		view_render.print(gamescore_over.score_1st);
 	}
 
-	// =========================================================
-	// 3. VẼ VECTOR 3 ICON MINI (Thay cho bitmap to đùng)
-	// =========================================================
-	
-	// ICON 1: Chơi lại (Nút DOWN) - Hình vòng lặp (Restart)
 	int x1 = 12, y1 = 54;
-	view_render.drawFastHLine(x1+2, y1+1, 4, WHITE); // Vòng cung trên
-	view_render.drawFastHLine(x1+2, y1+7, 4, WHITE); // Vòng cung dưới
-	view_render.drawFastVLine(x1+1, y1+3, 3, WHITE); // Vòng cung trái
-	view_render.drawFastVLine(x1+7, y1+4, 2, WHITE); // Vòng cung phải
-	view_render.drawPixel(x1+2, y1+2, WHITE);        // Bo góc trái trên
-	view_render.drawPixel(x1+2, y1+6, WHITE);        // Bo góc trái dưới
-	view_render.drawPixel(x1+6, y1+6, WHITE);        // Bo góc phải dưới
-	view_render.drawLine(x1+5, y1-1, x1+7, y1+1, WHITE); // Cánh mũi tên trên
-	view_render.drawLine(x1+5, y1+3, x1+7, y1+1, WHITE); // Cánh mũi tên dưới
+	view_render.drawFastHLine(x1+2, y1+1, 4, WHITE);
+	view_render.drawFastHLine(x1+2, y1+7, 4, WHITE);
+	view_render.drawFastVLine(x1+1, y1+3, 3, WHITE);
+	view_render.drawFastVLine(x1+7, y1+4, 2, WHITE);
+	view_render.drawPixel(x1+2, y1+2, WHITE);
+	view_render.drawPixel(x1+2, y1+6, WHITE);
+	view_render.drawPixel(x1+6, y1+6, WHITE);
+	view_render.drawLine(x1+5, y1-1, x1+7, y1+1, WHITE);
+	view_render.drawLine(x1+5, y1+3, x1+7, y1+1, WHITE);
 
-	// ICON 2: Bảng Xếp Hạng (Nút UP) - Bục nhận giải 3 bậc
 	int x2 = 58, y2 = 54;
-	// Bậc 2 (Trái)
+
 	view_render.drawFastHLine(x2, y2+4, 3, WHITE);
 	view_render.drawFastVLine(x2, y2+4, 5, WHITE);
-	// Bậc 1 (Giữa)
+
 	view_render.drawFastHLine(x2+3, y2, 4, WHITE);
 	view_render.drawFastVLine(x2+3, y2, 9, WHITE);
 	view_render.drawFastVLine(x2+7, y2, 9, WHITE);
-	// Bậc 3 (Phải)
+
 	view_render.drawFastHLine(x2+8, y2+6, 3, WHITE);
 	view_render.drawFastVLine(x2+11, y2+6, 3, WHITE);
-	view_render.drawFastHLine(x2, y2+9, 12, WHITE); // Mặt đất bục
+	view_render.drawFastHLine(x2, y2+9, 12, WHITE);
 
-	// ICON 3: Trang chủ (Nút MODE) - Hình Ngôi nhà mini
 	int x3 = 106, y3 = 54;
-	view_render.drawLine(x3, y3+4, x3+4, y3, WHITE);     // Mái trái
-	view_render.drawLine(x3+4, y3, x3+8, y3+4, WHITE);   // Mái phải
-	view_render.drawFastVLine(x3+1, y3+4, 5, WHITE);     // Tường trái
-	view_render.drawFastVLine(x3+7, y3+4, 5, WHITE);     // Tường phải
-	view_render.drawFastHLine(x3+1, y3+8, 7, WHITE);     // Sàn nhà
-	view_render.drawFastVLine(x3+3, y3+6, 3, WHITE);     // Cửa
-	view_render.drawFastVLine(x3+5, y3+6, 3, WHITE);     // Cửa
+	view_render.drawLine(x3, y3+4, x3+4, y3, WHITE);
+	view_render.drawLine(x3+4, y3, x3+8, y3+4, WHITE);
+	view_render.drawFastVLine(x3+1, y3+4, 5, WHITE);
+	view_render.drawFastVLine(x3+7, y3+4, 5, WHITE);
+	view_render.drawFastHLine(x3+1, y3+8, 7, WHITE);
+	view_render.drawFastVLine(x3+3, y3+6, 3, WHITE);
+	view_render.drawFastVLine(x3+5, y3+6, 3, WHITE);
 
 	view_render.update();
 }
 
-/*****************************************************************************/
-/* Handle - Game Over */
-/*****************************************************************************/
 void scr_game_over_handle(ak_msg_t* msg) {
 	switch (msg->sig) {
 	case SCREEN_ENTRY: {
 		APP_DBG_SIG("SCREEN_ENTRY\n");
-		
+
 		eeprom_read(EEPROM_SCORE_START_ADDR, (uint8_t*)&gamescore_over, sizeof(gamescore_over));
 		is_new_record = false;
-		
-		// Thuật toán kiểm tra kỷ lục
+
 		if (ar_game_score > gamescore_over.score_1st) {
 			gamescore_over.score_3rd = gamescore_over.score_2nd;
 			gamescore_over.score_2nd = gamescore_over.score_1st;
 			gamescore_over.score_1st = ar_game_score;
 			is_new_record = true;
-		} 
+		}
 		else if (ar_game_score > gamescore_over.score_2nd && ar_game_score < gamescore_over.score_1st) {
 			gamescore_over.score_3rd = gamescore_over.score_2nd;
 			gamescore_over.score_2nd = ar_game_score;
-			is_new_record = true; // Lọt top 2
+			is_new_record = true;
 		}
 		else if (ar_game_score > gamescore_over.score_3rd && ar_game_score < gamescore_over.score_2nd) {
 			gamescore_over.score_3rd = ar_game_score;
-			is_new_record = true; // Lọt top 3
+			is_new_record = true;
 		}
 
 		if (is_new_record) {
 			eeprom_write(EEPROM_SCORE_START_ADDR, (uint8_t*)&gamescore_over, sizeof(gamescore_over));
 		}
 
-		// Khởi tạo animation
 		anim_y = 0;
 		anim_dir = 1;
 		blink_state = true;
 
-		// Bật Timer chu kỳ 100ms để chạy Animation
 		timer_set(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK, 100, TIMER_ONE_SHOT);
 
 		view_render.initialize();
@@ -164,26 +167,23 @@ void scr_game_over_handle(ak_msg_t* msg) {
 		break;
 
 	case AR_GAME_TIME_TICK: {
-		// 1. Tính toán tọa độ lơ lửng cho chữ GAME OVER
+
 		anim_y += anim_dir;
 		if (anim_y >= 2 || anim_y <= -2) {
-			anim_dir = -anim_dir; 
+			anim_dir = -anim_dir;
 		}
-		
-		// 2. Chớp tắt chữ nếu có Kỷ lục mới
+
 		blink_state = !blink_state;
 
-		// Vẽ lại màn hình
 		view_scr_game_over();
 
-		// Lặp lại Timer
 		timer_set(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK, 150, TIMER_ONE_SHOT);
 		break;
 	}
 
 	case AC_DISPLAY_BUTTON_DOWN_RELEASED: {
 		APP_DBG_SIG("RESTART_GAME\n");
-		timer_remove_attr(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK); // TẮT TIMER
+		timer_remove_attr(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK);
 		SCREEN_TRAN(scr_archery_game_handle, &scr_archery_game);
 		BUZZER_PlayTones(tones_startup);
 	}
@@ -191,7 +191,7 @@ void scr_game_over_handle(ak_msg_t* msg) {
 
 	case AC_DISPLAY_BUTTON_UP_RELEASED: {
 		APP_DBG_SIG("GO_CHARTS\n");
-		timer_remove_attr(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK); // TẮT TIMER
+		timer_remove_attr(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK);
 		SCREEN_TRAN(scr_charts_game_handle, &scr_charts_game);
 		BUZZER_PlayTones(tones_cc);
 	}
@@ -199,7 +199,7 @@ void scr_game_over_handle(ak_msg_t* msg) {
 
 	case AC_DISPLAY_BUTTON_MODE_RELEASED: {
 		APP_DBG_SIG("GO_HOME\n");
-		timer_remove_attr(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK); // TẮT TIMER
+		timer_remove_attr(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK);
 		SCREEN_TRAN(scr_menu_game_handle, &scr_menu_game);
 		BUZZER_PlayTones(tones_cc);
 	}
