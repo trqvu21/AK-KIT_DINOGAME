@@ -79,7 +79,7 @@ void scr_multi_lobby_handle(ak_msg_t* msg) {
 		current_rf_channel = 10 + room_number;
 		
 		// Chuyển sang màn hình Game chính
-		SCREEN_TRAN(scr_archery_game_handle, &scr_archery_game);
+		SCREEN_TRAN(scr_dino_game_handle, &scr_dino_game);
 		BUZZER_PlayTones(tones_startup);
 	}
 		break;

@@ -5,7 +5,7 @@
 #include "app_dbg.h"
 #include "app_if.h"
 #include "task_list.h"
-#include "scr_archery_game.h"
+#include "scr_dino_game.h"
 
 // [QUAN TRỌNG] Include Driver để gọi hàm Init
 #include "nRF24.h" 

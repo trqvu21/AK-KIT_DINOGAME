@@ -184,7 +184,7 @@ void scr_game_over_handle(ak_msg_t* msg) {
 	case AC_DISPLAY_BUTTON_DOWN_RELEASED: {
 		APP_DBG_SIG("RESTART_GAME\n");
 		timer_remove_attr(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK);
-		SCREEN_TRAN(scr_archery_game_handle, &scr_archery_game);
+		SCREEN_TRAN(scr_dino_game_handle, &scr_dino_game);
 		BUZZER_PlayTones(tones_startup);
 	}
 		break;

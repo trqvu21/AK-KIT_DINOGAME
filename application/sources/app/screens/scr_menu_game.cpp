@@ -45,7 +45,7 @@ struct menu_items{
 // Menu items name
 // Menu items name
 static char menu_items_name[NUMBER_MENU_ITEMS][20] = {
-    "   Dino Run       ",		// <--- ĐÃ SỬA TỪ "Archery Game"
+    "   Dino Run       ",
     "   Setting        ",
     "   Charts         ",
     "   Exit           ",
@@ -53,7 +53,7 @@ static char menu_items_name[NUMBER_MENU_ITEMS][20] = {
 
 // Menu items icon
 static const uint8_t *menu_items_icon[NUMBER_MENU_ITEMS] = {
-	archery_icon,				// item 1
+	dino_icon,
 	setting_icon,				// item 2
 	chart_icon,					// item 3
 	exit_icon,					// item 4
@@ -61,14 +61,14 @@ static const uint8_t *menu_items_icon[NUMBER_MENU_ITEMS] = {
 
 // Menu items size W
 uint8_t menu_items_icon_size_w[NUMBER_MENU_ITEMS] = {
-	15,							// item 1
+	15,
 	16,							// item 2
 	16,							// item 3
 	15,							// item 4
 };
 
 uint8_t menu_items_icon_size_h[NUMBER_MENU_ITEMS] = {
-	15,							// item 1
+	15,
 	16,							// item 2
 	16,							// item 3
 	15,							// item 4
@@ -203,7 +203,7 @@ void update_menu_screen_chosse() {
 
 void screen_tran_menu() {
 	switch (screen_menu.location) {
-	case 0:	// item 1
+	case 0:
 			SCREEN_TRAN(scr_multi_lobby_handle, &scr_multi_lobby);	
 		break;
 	case 1:	// item 2

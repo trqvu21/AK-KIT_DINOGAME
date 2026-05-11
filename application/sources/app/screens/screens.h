@@ -1,7 +1,7 @@
 #ifndef __SCREENS_H__
 #define __SCREENS_H__
 
-#include "scr_archery_game.h"
+#include "scr_dino_game.h"
 #include "scr_charts_game.h"
 #include "scr_game_over.h"
 #include "scr_game_setting.h"
@@ -9,10 +9,10 @@
 #include "scr_menu_game.h"
 #include "scr_startup.h"
 #include "scr_multi_lobby.h"
-// scr_archery_game
-extern view_dynamic_t dyn_view_item_archery_game;
-extern view_screen_t scr_archery_game;
-extern void scr_archery_game_handle(ak_msg_t* msg);
+// scr_dino_game
+extern view_dynamic_t dyn_view_item_dino_game;
+extern view_screen_t scr_dino_game;
+extern void scr_dino_game_handle(ak_msg_t* msg);
 
 // scr_charts_game
 extern view_dynamic_t dyn_view_item_charts_game;

@@ -1,4 +1,4 @@
-#include "scr_archery_game.h"
+#include "scr_dino_game.h"
 
 uint8_t ar_game_state = 0;
 ar_game_setting_t settingsetup;
@@ -45,10 +45,10 @@ static void view_wrapper() {
     view_scr_dino_game();
 }
 
-view_dynamic_t dyn_view_item_archery_game = { { ITEM_TYPE_DYNAMIC }, view_wrapper };
-view_screen_t scr_archery_game = { &dyn_view_item_archery_game, ITEM_NULL, ITEM_NULL, .focus_item = 0 };
+view_dynamic_t dyn_view_item_dino_game = { { ITEM_TYPE_DYNAMIC }, view_wrapper };
+view_screen_t scr_dino_game = { &dyn_view_item_dino_game, ITEM_NULL, ITEM_NULL, .focus_item = 0 };
 
-void scr_archery_game_handle(ak_msg_t* msg) {
+void scr_dino_game_handle(ak_msg_t* msg) {
     switch (msg->sig) {
     case SCREEN_ENTRY: {
         APP_DBG_SIG("SCREEN_ENTRY\n");

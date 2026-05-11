@@ -1,5 +1,5 @@
-#ifndef __SCR_ARCHERY_GAME_H__
-#define __SCR_ARCHERY_GAME_H__
+#ifndef __SCR_DINO_GAME_H__
+#define __SCR_DINO_GAME_H__
 
 #include "fsm.h"
 #include "port.h"
@@ -36,8 +36,8 @@
 extern uint8_t ar_game_state;
 extern ar_game_setting_t settingsetup;
 
-extern view_dynamic_t dyn_view_item_archery_game;
-extern view_screen_t scr_archery_game;
-extern void scr_archery_game_handle(ak_msg_t* msg);
+extern view_dynamic_t dyn_view_item_dino_game;
+extern view_screen_t scr_dino_game;
+extern void scr_dino_game_handle(ak_msg_t* msg);
 
-#endif //__SCR_ARCHERY_GAME_H__
+#endif //__SCR_DINO_GAME_H__

@@ -74,7 +74,7 @@ extern void ar_game_objects_handle(ak_msg_t*);
 extern void ar_game_background_handle(ak_msg_t*);
 extern void ar_game_world_handle(ak_msg_t*);
 extern void ar_game_rf_handle(ak_msg_t*);
-extern void scr_archery_game_handle(ak_msg_t*);
+extern void scr_dino_game_handle(ak_msg_t*);
 
 /* LINK TASK */
 extern void task_link_phy(ak_msg_t*);

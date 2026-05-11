@@ -25,7 +25,7 @@ const task_t app_task_table[] = {
 	{AR_GAME_DINO_ID			,	TASK_PRI_LEVEL_4	,	ar_game_dino_handle		},
 	{AR_GAME_OBJECTS_ID			,	TASK_PRI_LEVEL_4	,	ar_game_objects_handle	},
 	{AR_GAME_RF_ID				,	TASK_PRI_LEVEL_4	,	ar_game_rf_handle		},
-	{AR_GAME_SCREEN_ID			,	TASK_PRI_LEVEL_4	,	scr_archery_game_handle	},
+	{AR_GAME_SCREEN_ID			,	TASK_PRI_LEVEL_4	,	scr_dino_game_handle	},
 
 	/*************************************************************************/
 	/* LINK TASK */

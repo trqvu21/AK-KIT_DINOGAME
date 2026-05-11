@@ -62,7 +62,7 @@ KIT tích hợp LCD **OLED 1.3"**, **3 nút nhấn**, **Buzzer**, **NRF24L01+**,
 
 ### 2.1 Mục tiêu kiến trúc
 
-Phiên bản hiện tại đã tách logic khỏi `scr_archery_game.cpp`. Screen chỉ giữ vai trò điều phối màn hình và vòng lặp timer, còn logic game nằm trong các module riêng:
+Phiên bản hiện tại đã tách logic khỏi `scr_dino_game.cpp`. Screen chỉ giữ vai trò điều phối màn hình và vòng lặp timer, còn logic game nằm trong các module riêng:
 
 | Module | Vai trò |
 |---|---|
@@ -71,111 +71,15 @@ Phiên bản hiện tại đã tách logic khỏi `scr_archery_game.cpp`. Screen
 | `ar_game_background` | Quản lý mây và nền. |
 | `ar_game_world` | Quản lý điểm, tốc độ, level, trạng thái win/lose và hiệu ứng speed up. |
 | `ar_game_rf` | Quản lý NRF24L01+, room lobby, hello/ready/starting, attack và died command. |
-| `scr_archery_game` | Điều phối Screen Entry, Timer Tick, Button Event và Render. |
+| `scr_dino_game` | Điều phối Screen Entry, Timer Tick, Button Event và Render. |
 
 Kiến trúc vẫn giữ số lượng task game hiện có để tránh tăng rủi ro tràn bộ nhớ, nhưng đổi vai trò thành các module Dino rõ ràng hơn.
 
 ### 2.2 Sơ đồ trình tự
 **Sơ đồ trình tự** được sử dụng để mô tả trình tự của các Message và luồng tương tác giữa các đối tượng trong một hệ thống.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Player
-    participant Screen as scr_archery_game
-    participant RF as ar_game_rf
-    participant NRF as NRF24L01+
-    participant World as ar_game_world
-    participant Dino as ar_game_dino
-    participant Background as ar_game_background
-    participant Objects as ar_game_objects
-    participant GameOver as scr_game_over
-    participant OLED as view_render
-
-    Note over Screen, NRF: SCREEN_ENTRY - Khởi tạo game và vào phòng
-    Player->>Screen: SCREEN_ENTRY
-    Screen->>World: ar_game_world_reset()
-    Screen->>Dino: ar_game_dino_reset()
-    Screen->>Objects: ar_game_objects_reset()
-    Screen->>Background: ar_game_background_reset()
-    Screen->>RF: ar_game_rf_setup()
-    RF->>RF: init_player_name()
-    RF->>NRF: rf_init_hardware_kit()
-    RF->>NRF: rf_mode_rx()
-    RF->>NRF: rf_send_cmd(CMD_HELLO)
-    Screen->>Screen: timer_set(AR_GAME_TIME_TICK, 10ms)
-
-    Note over Screen, RF: ROOM LOBBY - Hiện ID các kit trong phòng
-    loop AR_GAME_TIME_TICK khi đang WAITING
-        Screen->>RF: ar_game_rf_poll()
-        RF->>RF: tick_room_broadcast()
-        alt room_tick >= RF_ROOM_TICK
-            RF->>NRF: rf_send_cmd(CMD_HELLO hoặc CMD_READY)
-        end
-        RF->>NRF: nRF24_RXPacket(rx_data, 5)
-        alt cmd == CMD_HELLO
-            RF->>RF: remember_opponent(rx_name)
-        else cmd == CMD_READY
-            RF->>RF: remote_ready = true
-            RF->>RF: try_begin_starting()
-        end
-        Screen->>OLED: ar_game_rf_render_lobby()
-    end
-
-    Note over Player, RF: READY / SOLO - Điều khiển trong phòng
-    Player->>Screen: AC_DISPLAY_BUTTON_DOWN_RELEASED
-    Screen->>RF: ar_game_rf_ready()
-    alt Chỉ có một kit trong phòng và đã READY
-        RF->>RF: begin_starting(false)
-    else Kit hiện tại chưa READY
-        RF->>RF: local_ready = true
-        RF->>NRF: rf_send_cmd(CMD_READY)
-    else Hai kit đều READY
-        RF->>RF: begin_starting(true)
-        RF->>NRF: rf_send_cmd(CMD_STARTING)
-    end
-
-    Note over RF, OLED: STARTING - Countdown trước khi chạy
-    loop ar_game_mp_state == AR_DINO_MP_STARTING
-        Screen->>RF: ar_game_rf_poll()
-        RF->>RF: tick_starting()
-        Screen->>OLED: ar_game_rf_render_lobby()
-    end
-    RF->>World: ar_game_world_reset()
-    RF->>Dino: ar_game_dino_reset()
-    RF->>Objects: ar_game_objects_reset()
-    RF->>Background: ar_game_background_reset()
-    RF->>RF: ar_game_mp_state = AR_DINO_MP_PLAYING
-
-    Note over Screen, OLED: GAMEPLAY - Update và render frame
-    loop ar_game_mp_state == AR_DINO_MP_PLAYING
-        Screen->>RF: ar_game_rf_poll()
-        Screen->>World: ar_game_world_update()
-        Screen->>Dino: ar_game_dino_update()
-        Screen->>Background: ar_game_background_update()
-        Screen->>Objects: ar_game_objects_update()
-        Objects->>Dino: ar_game_dino_hit_test(obj)
-        Screen->>OLED: view_scr_dino_game()
-        Screen->>OLED: view_render.update()
-    end
-
-    Note over Objects, GameOver: Kết thúc ván
-    alt Dino đụng Cactus hoặc Bird
-        Objects->>RF: task_post_pure_msg(AR_GAME_RF_ID, AR_GAME_RF_SEND_DIED)
-        RF->>NRF: rf_send_cmd(CMD_I_DIED)
-        Objects->>World: task_post_pure_msg(AR_GAME_WORLD_ID, AR_GAME_WORLD_LOSE)
-        World->>GameOver: SCREEN_TRAN(scr_game_over_handle, &scr_game_over)
-    else Dino ăn Gift
-        Objects->>World: ar_game_score += 5
-        Objects->>RF: task_post_pure_msg(AR_GAME_RF_ID, AR_GAME_RF_SEND_ATTACK)
-        RF->>NRF: rf_send_cmd(CMD_ATTACK)
-    else Nhận CMD_ATTACK
-        RF->>World: task_post_pure_msg(AR_GAME_WORLD_ID, AR_GAME_WORLD_ATTACK_BEGIN)
-    else Nhận CMD_I_DIED
-        RF->>World: task_post_pure_msg(AR_GAME_WORLD_ID, AR_GAME_WORLD_WIN)
-        World->>GameOver: SCREEN_TRAN(scr_game_over_handle, &scr_game_over)
-    end
-```
+<p align="center"><img src="resources/images/overview.webp" alt="AK Embedded Base Kit - STM32L151" width="720"/></p>
+<p align="center"><strong><em>Hình 3:</em></strong> The sequence diagram</p>
 
 ### 2.3 Message và Signal chính
 
@@ -200,9 +104,9 @@ Trong code, game vẫn tái sử dụng các Task ID cũ của project để kh�
 | `AR_GAME_DINO_ID` | `ar_game_dino_handle` | `ar_game_dino` | Dino physics, jump, hitbox. |
 | `AR_GAME_OBJECTS_ID` | `ar_game_objects_handle` | `ar_game_objects` | Cactus/Bird/Gift movement, spawn, collision. |
 | `AR_GAME_RF_ID` | `ar_game_rf_handle` | `ar_game_rf` | NRF24 command, lobby, attack/died. |
-| `AR_GAME_SCREEN_ID` | `scr_archery_game_handle` | `scr_archery_game` | Screen event, timer tick, button dispatch, render frame. |
+| `AR_GAME_SCREEN_ID` | `scr_dino_game_handle` | `scr_dino_game` | Screen event, timer tick, button dispatch, render frame. |
 
-**Ghi chú hiệu năng:** Trong gameplay, các hàm update chính được gọi trực tiếp từ `scr_archery_game` để tránh overhead message queue và tránh tụt FPS khi spam nút. Các handler task vẫn được giữ cho setup/reset/RF command và để kiến trúc event-driven rõ ràng.
+**Ghi chú hiệu năng:** Trong gameplay, các hàm update chính được gọi trực tiếp từ `scr_dino_game` để tránh overhead message queue và tránh tụt FPS khi spam nút. Các handler task vẫn được giữ cho setup/reset/RF command và để kiến trúc event-driven rõ ràng.
 
 ### 2.5 Signal theo module
 
@@ -244,510 +148,43 @@ Trong code, game vẫn tái sử dụng các Task ID cũ của project để kh�
 
 ### 3.1 Dino
 
-**Sequence diagram:**
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Player
-    participant Screen as scr_archery_game
-    participant Dino as ar_game_dino
-    participant Down as btn_down
-    participant Objects as ar_game_objects
-    participant OLED as view_render
-
-    rect rgba(0, 180, 80, 0.12)
-    Note over Screen, Dino: SETUP / RESET
-    Screen->>Dino: ar_game_dino_reset()
-    activate Dino
-    Dino->>Dino: dino.y = AR_DINO_GROUND_Y_SCALED - (AR_DINO_H * 10)
-    Dino->>Dino: dino.v_y = 0
-    Dino->>Dino: dino.is_jumping = false
-    Dino->>Dino: dino.is_ducking = false
-    deactivate Dino
-    end
-
-    rect rgba(255, 200, 0, 0.14)
-    Note over Player, Dino: ACTION - Nhảy
-    Player->>Screen: AC_DISPLAY_BUTTON_UP_PRESSED
-    activate Screen
-    alt ar_game_mp_state == AR_DINO_MP_PLAYING
-        Screen->>Dino: ar_game_dino_jump()
-        activate Dino
-        alt !dino.is_jumping
-            Dino->>Dino: dino.v_y = AR_DINO_JUMP_SCALED
-            Dino->>Dino: dino.is_jumping = true
-        else Dino đang nhảy
-            Dino->>Dino: bỏ qua input
-        end
-        deactivate Dino
-    end
-    deactivate Screen
-    end
-
-    rect rgba(0, 140, 255, 0.12)
-    Note over Screen, Dino: UPDATE - Cúi, nhảy, trọng lực
-    Screen->>Dino: ar_game_dino_update()
-    activate Dino
-    Dino->>Down: đọc btn_down.state
-    Down-->>Dino: BUTTON_SW_STATE_PRESSED / RELEASED
-    Dino->>Dino: dino.is_ducking = (btn_down.state == BUTTON_SW_STATE_PRESSED)
-    alt dino.is_jumping
-        Dino->>Dino: dino.y += dino.v_y
-        Dino->>Dino: dino.v_y += AR_DINO_GRAVITY_SCALED
-        alt Dino chạm đất
-            Dino->>Dino: dino.y = ground
-            Dino->>Dino: dino.is_jumping = false
-            Dino->>Dino: dino.v_y = 0
-        end
-    end
-    deactivate Dino
-    end
-
-    rect rgba(255, 80, 80, 0.12)
-    Note over Objects, Dino: HITBOX - Kiểm tra va chạm
-    Objects->>Dino: ar_game_dino_hit_test(obj)
-    activate Dino
-    alt dino.is_ducking
-        Dino->>Dino: giảm chiều cao hitbox
-    else bình thường
-        Dino->>Dino: dùng hitbox đầy đủ
-    end
-    Dino-->>Objects: true / false
-    deactivate Dino
-    end
-
-    rect rgba(120, 120, 255, 0.10)
-    Note over Screen, OLED: RENDER - Vẽ Dino
-    Screen->>Dino: ar_game_dino_render()
-    activate Dino
-    alt dino.is_ducking
-        Dino->>OLED: drawBitmap(bitmap_dino_duck)
-    else đứng / nhảy
-        Dino->>OLED: drawBitmap(bitmap_dino)
-    end
-    deactivate Dino
-    end
-```
+<p align="center"><img src="resources/images/dino.webp" alt="AK Embedded Base Kit - STM32L151" width="720"/></p>
+<p align="center"><strong><em>Hình 4:</em></strong> Dino sequence diagram</p>
 
 **Tóm tắt nguyên lý:** Dino nhận hành động nhảy từ button event, nhận trạng thái cúi từ `btn_down.state`, tự cập nhật trọng lực theo nhịp gameplay và cung cấp hàm hitbox cho module Objects.
 
 ### 3.2 Objects: Cactus, Bird, Gift
 
-**Sequence diagram:**
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Screen as scr_archery_game
-    participant Objects as ar_game_objects
-    participant World as ar_game_world
-    participant Dino as ar_game_dino
-    participant RF as ar_game_rf
-    participant OLED as view_render
-
-    rect rgba(0, 180, 80, 0.12)
-    Note over Screen, Objects: SETUP / RESET
-    Screen->>Objects: ar_game_objects_reset()
-    activate Objects
-    Objects->>Objects: object_set(ar_game_objects[0], Cactus)
-    Objects->>Objects: object_set(ar_game_objects[1], Cactus)
-    Objects->>Objects: object_set(ar_game_objects[2], Gift)
-    Objects->>Objects: object_set(ar_game_objects[3], Bird)
-    deactivate Objects
-    end
-
-    rect rgba(0, 140, 255, 0.12)
-    Note over Screen, Objects: UPDATE - Di chuyển và sinh lại object
-    Screen->>Objects: ar_game_objects_update()
-    activate Objects
-    loop i = 0..AR_DINO_OBJECT_COUNT-1
-        Objects->>World: đọc ar_game_current_speed
-        Objects->>Objects: obj->x -= ar_game_current_speed
-        alt obj->active == false
-            Objects->>Objects: chờ object đi ra khỏi màn hình
-        else object ra khỏi màn hình
-            alt object_is_obstacle(obj)
-                Objects->>World: ar_game_score++
-            end
-            Objects->>Objects: recycle_object(i)
-        end
-        Objects->>Objects: handle_object_collision(obj)
-    end
-    deactivate Objects
-    end
-
-    rect rgba(255, 80, 80, 0.12)
-    Note over Objects, RF: COLLISION - Xử lý va chạm
-    Objects->>Dino: ar_game_dino_hit_test(obj)
-    alt không va chạm
-        Dino-->>Objects: false
-    else Hit Cactus hoặc Bird
-        Dino-->>Objects: true
-        Objects->>RF: task_post_pure_msg(AR_GAME_RF_ID, AR_GAME_RF_SEND_DIED)
-        Objects->>World: task_post_pure_msg(AR_GAME_WORLD_ID, AR_GAME_WORLD_LOSE)
-    else Hit Gift
-        Dino-->>Objects: true
-        Objects->>Objects: obj->active = false
-        Objects->>World: ar_game_score += 5
-        Objects->>RF: task_post_pure_msg(AR_GAME_RF_ID, AR_GAME_RF_SEND_ATTACK)
-    end
-    end
-
-    rect rgba(120, 120, 255, 0.10)
-    Note over Screen, OLED: RENDER - Vẽ object
-    Screen->>Objects: ar_game_objects_render()
-    activate Objects
-    loop từng object đang active
-        alt AR_DINO_OBJ_CACTUS
-            Objects->>OLED: drawBitmap(bitmap_cactus)
-        else AR_DINO_OBJ_BIRD
-            Objects->>OLED: drawBitmap(bitmap_bird)
-        else AR_DINO_OBJ_GIFT
-            Objects->>OLED: draw sparkle pixels
-            Objects->>OLED: drawBitmap(bitmap_gift)
-        end
-    end
-    deactivate Objects
-    end
-```
+<p align="center"><img src="resources/images/obj.webp" alt="AK Embedded Base Kit - STM32L151" width="720"/></p>
+<p align="center"><strong><em>Hình 5:</em></strong> Objects sequence diagram</p>
 
 **Tóm tắt nguyên lý:** Objects chịu trách nhiệm tạo nhịp chơi chính: di chuyển vật cản, recycle vật cản, tăng điểm, kiểm tra va chạm và gửi event sang World/RF.
 
 ### 3.3 World
 
-**Sequence diagram:**
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Screen as scr_archery_game
-    participant World as ar_game_world
-    participant RF as ar_game_rf
-    participant Objects as ar_game_objects
-    participant OLED as view_render
-    participant GameOver as scr_game_over
-
-    rect rgba(0, 180, 80, 0.12)
-    Note over Screen, World: RESET - Đưa World về trạng thái đầu trận
-    Screen->>World: ar_game_world_reset()
-    activate World
-    World->>World: ar_game_score = 0
-    World->>World: ar_game_frame_skip = 0
-    World->>World: ar_game_attack_timer = 0
-    World->>World: ar_game_current_speed = AR_DINO_BASE_SPEED_SCALED
-    World->>World: speed_level = 0
-    World->>World: speed_up_notice_timer = 0
-    deactivate World
-    end
-
-    rect rgba(0, 140, 255, 0.12)
-    Note over Screen, World: UPDATE - Tính tốc độ và độ khó
-    Screen->>World: ar_game_world_update()
-    activate World
-    World->>World: world_update_speed_notice()
-    World->>World: ar_game_current_speed = world_base_speed()
-    alt ar_game_attack_timer > 0
-        World->>World: ar_game_attack_timer--
-        World->>World: ar_game_current_speed += AR_DINO_ATTACK_BONUS_SPEED
-    end
-    alt speed_up_notice_timer > 0
-        World->>World: speed_up_notice_timer--
-    end
-    deactivate World
-    end
-
-    rect rgba(255, 80, 80, 0.12)
-    Note over RF, GameOver: ATTACK / WIN / LOSE
-    RF->>World: AR_GAME_WORLD_ATTACK_BEGIN
-    activate World
-    World->>World: ar_game_attack_timer = AR_DINO_ATTACK_TICKS
-    deactivate World
-
-    Objects->>World: AR_GAME_WORLD_LOSE
-    activate World
-    World->>World: ar_game_mp_state = AR_DINO_MP_LOSE
-    World->>GameOver: SCREEN_TRAN(scr_game_over_handle, &scr_game_over)
-    deactivate World
-
-    RF->>World: AR_GAME_WORLD_WIN
-    activate World
-    World->>World: ar_game_mp_state = AR_DINO_MP_WIN
-    World->>GameOver: SCREEN_TRAN(scr_game_over_handle, &scr_game_over)
-    deactivate World
-    end
-
-    rect rgba(120, 120, 255, 0.10)
-    Note over Screen, OLED: RENDER - HUD và cảnh báo
-    Screen->>World: ar_game_world_render_hud()
-    activate World
-    World->>OLED: vẽ ground line
-    World->>OLED: vẽ score box
-    deactivate World
-
-    Screen->>World: ar_game_world_render_attack_warning()
-    activate World
-    alt speed_up_notice_timer > 0
-        World->>OLED: print "SPD UP"
-    end
-    alt ar_game_attack_timer > 0
-        World->>OLED: print "SPEED UP!"
-    end
-    deactivate World
-    end
-```
+<p align="center"><img src="resources/images/world.webp" alt="AK Embedded Base Kit - STM32L151" width="720"/></p>
+<p align="center"><strong><em>Hình 6:</em></strong> World sequence diagram</p>
 
 **Tóm tắt nguyên lý:** World không trực tiếp điều khiển object, nhưng cung cấp tốc độ hiện tại và trạng thái game. Đây là module quyết định độ khó theo điểm, setting và attack.
 
 ### 3.4 RF / Multiplayer
 
-**Sequence diagram:**
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Screen as scr_archery_game
-    participant RF as ar_game_rf
-    participant NRF as NRF24L01+
-    participant World as ar_game_world
-    participant Dino as ar_game_dino
-    participant Objects as ar_game_objects
-    participant BG as ar_game_background
-
-    rect rgba(0, 180, 80, 0.12)
-    Note over Screen, NRF: SETUP - Khởi tạo phòng
-    Screen->>RF: ar_game_rf_setup()
-    activate RF
-    RF->>RF: init_player_name()
-    RF->>RF: local_ready = false
-    RF->>RF: remote_ready = false
-    RF->>RF: opponent_name[0] = '\0'
-    RF->>NRF: rf_init_hardware_kit()
-    RF->>NRF: rf_mode_rx()
-    RF->>NRF: rf_send_cmd(CMD_HELLO)
-    deactivate RF
-    end
-
-    rect rgba(255, 200, 0, 0.14)
-    Note over Screen, NRF: ROOM - Broadcast ID trong phòng
-    Screen->>RF: ar_game_rf_poll()
-    activate RF
-    RF->>RF: tick_room_broadcast()
-    alt ar_game_mp_state == AR_DINO_MP_WAITING && room_tick >= RF_ROOM_TICK
-        RF->>NRF: rf_send_cmd(CMD_HELLO hoặc CMD_READY)
-    end
-    deactivate RF
-    end
-
-    rect rgba(255, 200, 0, 0.14)
-    Note over Screen, NRF: READY - Người chơi nhấn BTN DOWN
-    Screen->>RF: ar_game_rf_ready()
-    activate RF
-    alt local_ready == true && remote_ready == false
-        RF->>RF: opponent_name[0] = '\0'
-        RF->>RF: begin_starting(false)
-    else ar_game_mp_state == AR_DINO_MP_WAITING
-        RF->>RF: local_ready = true
-        RF->>NRF: rf_send_cmd(CMD_READY)
-        RF->>RF: try_begin_starting()
-    end
-    deactivate RF
-    end
-
-    rect rgba(0, 140, 255, 0.12)
-    Note over Screen, World: RECEIVE - Nhận packet từ kit còn lại
-    Screen->>RF: ar_game_rf_poll()
-    activate RF
-    RF->>NRF: nRF24_RXPacket(rx_data, 5)
-    alt có packet
-        RF->>RF: cmd = rx_data[0]
-        RF->>RF: rx_name = rx_data[1..3]
-        alt ar_game_mp_state == AR_DINO_MP_WAITING
-            RF->>RF: handle_waiting_packet(cmd, rx_name)
-        else ar_game_mp_state == AR_DINO_MP_STARTING
-            RF->>RF: tick_starting()
-        else ar_game_mp_state == AR_DINO_MP_PLAYING
-            RF->>RF: handle_playing_packet(cmd, rx_name)
-        end
-    end
-    deactivate RF
-    end
-
-    rect rgba(255, 80, 80, 0.12)
-    Note over RF, World: WAITING COMMAND - Đồng bộ phòng
-    alt cmd == CMD_HELLO
-        RF->>RF: remember_opponent(rx_name)
-    else cmd == CMD_READY
-        RF->>RF: remember_opponent(rx_name)
-        RF->>RF: remote_ready = true
-        RF->>RF: try_begin_starting()
-    else cmd == CMD_STARTING
-        RF->>RF: begin_starting(false)
-    end
-    end
-
-    rect rgba(255, 80, 80, 0.12)
-    Note over RF, World: PLAYING COMMAND - Attack hoặc Win
-    RF->>RF: packet_is_from_opponent(rx_name)
-    alt cmd == CMD_ATTACK
-        RF->>World: task_post_pure_msg(AR_GAME_WORLD_ID, AR_GAME_WORLD_ATTACK_BEGIN)
-    else cmd == CMD_I_DIED
-        RF->>World: task_post_pure_msg(AR_GAME_WORLD_ID, AR_GAME_WORLD_WIN)
-    end
-    end
-
-    rect rgba(120, 120, 255, 0.10)
-    Note over RF, BG: START MATCH - Starting rồi bắt đầu trận
-    RF->>RF: begin_starting(true)
-    RF->>NRF: rf_send_cmd(CMD_STARTING)
-    RF->>RF: ar_game_mp_state = AR_DINO_MP_STARTING
-    RF->>RF: tick_starting()
-    RF->>RF: start_match()
-    activate RF
-    RF->>World: ar_game_world_reset()
-    RF->>Dino: ar_game_dino_reset()
-    RF->>Objects: ar_game_objects_reset()
-    RF->>BG: ar_game_background_reset()
-    RF->>RF: ar_game_mp_state = AR_DINO_MP_PLAYING
-    deactivate RF
-    end
-```
+<p align="center"><img src="resources/images/rf.webp" alt="AK Embedded Base Kit - STM32L151" width="720"/></p>
+<p align="center"><strong><em>Hình 7:</em></strong> RF sequence diagram</p>
 
 **Tóm tắt nguyên lý:** RF quản lý cả lobby và command trong trận. Mỗi gói gửi 5 byte gồm command và tên người gửi để tránh nhận nhầm packet không thuộc phiên hiện tại.
 
 ### 3.5 Background
 
-**Sequence diagram:**
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Screen as scr_archery_game
-    participant BG as ar_game_background
-    participant OLED as view_render
-
-    rect rgba(0, 180, 80, 0.12)
-    Screen->>BG: ar_game_background_reset()
-    BG->>BG: cloud.x = 120 * 10
-    BG->>BG: cloud.y = 10
-    BG->>BG: cloud.w/h = 16
-    end
-
-    rect rgba(0, 140, 255, 0.12)
-    Screen->>BG: ar_game_background_update()
-    BG->>BG: cloud.x -= AR_DINO_BG_SPEED_SCALED
-    alt cloud leaves screen
-        BG->>BG: cloud.x = random position after right edge
-    end
-    end
-
-    rect rgba(120, 120, 255, 0.10)
-    Screen->>BG: ar_game_background_render()
-    BG->>OLED: drawBitmap(bitmap_cloud)
-    end
-```
+<p align="center"><img src="resources/images/BG.webp" alt="AK Embedded Base Kit - STM32L151" width="720"/></p>
+<p align="center"><strong><em>Hình 8:</em></strong> Background sequence diagram</p>
 
 **Tóm tắt nguyên lý:** Background chỉ xử lý cloud nền để game có chiều sâu, không ảnh hưởng collision.
 
 ### 3.6 Screen
 
-**Sequence diagram:**
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Player
-    participant AK
-    participant Screen as scr_archery_game
-    participant RF as ar_game_rf
-    participant World as ar_game_world
-    participant Dino as ar_game_dino
-    participant Objects as ar_game_objects
-    participant BG as ar_game_background
-    participant OLED as view_render
-
-    rect rgba(0, 180, 80, 0.12)
-    Note over AK, BG: SCREEN_ENTRY
-    AK->>Screen: SCREEN_ENTRY
-    activate Screen
-    Screen->>Screen: eeprom_read(EEPROM_SETTING_START_ADDR, settingsetup)
-    Screen->>Screen: ar_game_state = GAME_PLAY
-    Screen->>Screen: ar_game_mp_state = AR_DINO_MP_WAITING
-    Screen->>Screen: gameplay_tick_divider = 0
-    Screen->>Screen: lobby_render_divider = 0
-    Screen->>World: ar_game_world_reset()
-    Screen->>Dino: ar_game_dino_reset()
-    Screen->>Objects: ar_game_objects_reset()
-    Screen->>BG: ar_game_background_reset()
-    Screen->>RF: ar_game_rf_setup()
-    Screen->>AK: timer_set(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK, 10, TIMER_ONE_SHOT)
-    deactivate Screen
-    end
-
-    rect rgba(0, 140, 255, 0.12)
-    Note over AK, OLED: AR_GAME_TIME_TICK
-    AK->>Screen: AR_GAME_TIME_TICK
-    activate Screen
-    Screen->>RF: ar_game_rf_poll()
-    alt ar_game_mp_state == AR_DINO_MP_PLAYING
-        Screen->>Screen: gameplay_tick_divider++
-        alt gameplay_tick_divider >= 2
-            Screen->>Screen: gameplay_tick_divider = 0
-            Screen->>World: ar_game_world_update()
-            Screen->>Dino: ar_game_dino_update()
-            Screen->>BG: ar_game_background_update()
-            Screen->>Objects: ar_game_objects_update()
-            Screen->>Screen: view_scr_dino_game()
-            Screen->>OLED: view_render.update()
-        end
-    else ar_game_mp_state != AR_DINO_MP_PLAYING
-        Screen->>Screen: gameplay_tick_divider = 0
-        Screen->>Screen: lobby_render_divider++
-        alt lobby_render_divider >= 10
-            Screen->>Screen: view_scr_dino_game()
-            Screen->>OLED: view_render.update()
-        end
-    end
-    Screen->>AK: timer_set(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK, 10, TIMER_ONE_SHOT)
-    Screen->>Screen: SCREEN_NONE_UPDATE_MASK()
-    deactivate Screen
-    end
-
-    rect rgba(255, 200, 0, 0.14)
-    Note over Player, RF: BUTTON EVENT
-    Player->>Screen: AC_DISPLAY_BUTTON_UP_PRESSED
-    activate Screen
-    alt ar_game_mp_state == AR_DINO_MP_PLAYING
-        Screen->>Dino: ar_game_dino_jump()
-    end
-    Screen->>Screen: SCREEN_NONE_UPDATE_MASK()
-    deactivate Screen
-
-    Player->>Screen: AC_DISPLAY_BUTTON_UP_RELEASED
-    activate Screen
-    Screen->>Screen: SCREEN_NONE_UPDATE_MASK()
-    deactivate Screen
-
-    Player->>Screen: AC_DISPLAY_BUTTON_DOWN_RELEASED
-    activate Screen
-    alt ar_game_mp_state == AR_DINO_MP_WAITING
-        Screen->>RF: ar_game_rf_ready()
-    else đang chơi
-        Screen->>Screen: SCREEN_NONE_UPDATE_MASK()
-    end
-    deactivate Screen
-    end
-
-    rect rgba(180, 180, 180, 0.12)
-    Note over Player, Screen: EXIT
-    Player->>Screen: AC_DISPLAY_BUTTON_MODE_RELEASED
-    activate Screen
-    Screen->>Screen: ar_game_state = GAME_OFF
-    Screen->>AK: timer_remove_attr(AC_TASK_DISPLAY_ID, AR_GAME_TIME_TICK)
-    Screen->>Screen: SCREEN_TRAN(scr_menu_game_handle, &scr_menu_game)
-    deactivate Screen
-    end
-```
+<p align="center"><img src="resources/images/SCR.webp" alt="AK Embedded Base Kit - STM32L151" width="720"/></p>
+<p align="center"><strong><em>Hình 9:</em></strong> Screen sequence diagram</p>
 
 **Tóm tắt nguyên lý:** Screen là nơi nối các module lại với nhau. Screen không giữ logic vật lý, spawn hay RF packet; nó chỉ gọi đúng module theo đúng thời điểm.
 
@@ -792,7 +229,7 @@ typedef struct {
 
 ### 5.1 Screen Entry
 
-`scr_archery_game.cpp` chịu trách nhiệm khởi tạo màn chơi.
+`scr_dino_game.cpp` chịu trách nhiệm khởi tạo màn chơi.
 
 ```cpp
 case SCREEN_ENTRY: {
@@ -1021,7 +458,7 @@ make flash
 
 ## VIII. Ghi chú triển khai
 
-- Game giữ public screen name `scr_archery_game` để tương thích với Menu, Game Over và Charts.
+- Public screen của game hiện dùng tên `scr_dino_game` để đồng bộ với Dino code.
 - Menu không bị thay đổi trong refactor.
 - `SCREEN_NONE_UPDATE_MASK()` được dùng để tránh screen manager tự render lại sau các message nút, giúp spam nút nhảy không làm tụt FPS.
 - RF vẫn poll mỗi 10ms, còn gameplay physics chạy theo nhịp chia 20ms để tốc độ và trọng lực ổn định hơn trên kit thật.

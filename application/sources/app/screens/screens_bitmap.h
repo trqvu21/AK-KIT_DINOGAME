@@ -3,8 +3,8 @@
 
 #include "view_render.h"
 
-extern const unsigned char PROGMEM bitmap_archery_I [];
-extern const unsigned char PROGMEM bitmap_archery_II [];
+extern const unsigned char PROGMEM bitmap_dino_legacy_I [];
+extern const unsigned char PROGMEM bitmap_dino_legacy_II [];
 extern const unsigned char PROGMEM bitmap_meteoroid_I [];
 extern const unsigned char PROGMEM bitmap_meteoroid_II [];
 extern const unsigned char PROGMEM bitmap_meteoroid_III [];
@@ -23,7 +23,7 @@ extern const unsigned char PROGMEM chosse_icon [];
 extern const unsigned char PROGMEM speaker_1 [];
 extern const unsigned char PROGMEM speaker_2 [];
 
-extern const unsigned char PROGMEM archery_icon [];
+extern const unsigned char PROGMEM dino_icon [];
 extern const unsigned char PROGMEM dot_icon [];
 extern const unsigned char PROGMEM chart_icon [];
 extern const unsigned char PROGMEM setting_icon [];
