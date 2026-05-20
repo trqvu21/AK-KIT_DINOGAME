@@ -62,7 +62,6 @@ KIT tích hợp LCD **OLED 1.3"**, **3 nút nhấn**, **Buzzer**, **NRF24L01+**,
 
 ### 2.1 Mục tiêu kiến trúc
 
-Phiên bản hiện tại đã tách logic khỏi `scr_dino_game.cpp`. Screen chỉ giữ vai trò điều phối màn hình và vòng lặp timer, còn logic game nằm trong các module riêng:
 
 | Module | Vai trò |
 |---|---|
@@ -73,12 +72,11 @@ Phiên bản hiện tại đã tách logic khỏi `scr_dino_game.cpp`. Screen ch
 | `ar_game_rf` | Quản lý NRF24L01+, room lobby, hello/ready/starting, attack và died command. |
 | `scr_dino_game` | Điều phối Screen Entry, Timer Tick, Button Event và Render. |
 
-Kiến trúc vẫn giữ số lượng task game hiện có để tránh tăng rủi ro tràn bộ nhớ, nhưng đổi vai trò thành các module Dino rõ ràng hơn.
 
 ### 2.2 Sơ đồ trình tự
 **Sơ đồ trình tự** được sử dụng để mô tả trình tự của các Message và luồng tương tác giữa các đối tượng trong một hệ thống.
 
-<p align="center"><img src="resources/images/fn.webp" alt="AK Embedded Base Kit - STM32L151" width="720"/></p>
+<p align="center"><img src="resources/images/fnsq.webp" alt="AK Embedded Base Kit - STM32L151" width="720"/></p>
 <p align="center"><strong><em>Hình 3:</em></strong> The sequence diagram</p>
 
 ### 2.3 Message và Signal chính
@@ -456,9 +454,18 @@ Nạp qua ST-Link:
 make flash
 ```
 
-## VIII. Ghi chú triển khai
+``` Note
+Cảm ơn bạn đã ghé thăm project này.
+Nếu bạn có bất kỳ câu hỏi, đề xuất hoặc phản hồi nào về dự án này hoặc quá trình phát triển, vui lòng liên hệ trực tiếp với tôi.
+```
 
-- Public screen của game hiện dùng tên `scr_dino_game` để đồng bộ với Dino code.
-- Menu không bị thay đổi trong refactor.
-- `SCREEN_NONE_UPDATE_MASK()` được dùng để tránh screen manager tự render lại sau các message nút, giúp spam nút nhảy không làm tụt FPS.
-- RF vẫn poll mỗi 10ms, còn gameplay physics chạy theo nhịp chia 20ms để tốc độ và trọng lực ổn định hơn trên kit thật.
+**My contact:** <br/>
+<a href="https://github.com/trqvu21">
+  <img src="https://img.shields.io/badge/GitHub-QuangVu-181717?style=flat&logo=github&logoColor=white"/>
+</a>
+<a href="https://www.linkedin.com/in/trqvu21/">
+  <img src="https://img.shields.io/badge/LinkedIn-Truong%20Quang%20Vu-0A66C2?style=flat&logo=linkedin&logoColor=white"/>
+</a>
+<a href="mailto:tqv4560@gmail.com">
+  <img src="https://img.shields.io/badge/Gmail-tqv4560%40gmail.com-EA4335?style=flat&logo=gmail&logoColor=white"/>
+</a>
